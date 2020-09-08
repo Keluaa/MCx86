@@ -3,7 +3,7 @@
 #include "data_types.h"
 
 
-#define _OP_DEF(name, code, instruction_class) struct name : public instruction_class { const U8 opcode = code; using instruction_class::instruction_class; }
+#define _OP_DEF(name, instruction_class) struct name : public instruction_class { const U8 opcode = Opcodes::name; using instruction_class::instruction_class; }
 
 
 namespace ISA 
@@ -51,6 +51,7 @@ namespace ISA
 	{
 		const U8 ADD = 0x00;
 		const U8 JO = 0x70;
+		const U8 JNO = 0x71;
 		const U8 XCHG = 0x90;
 		const U8 MOV = 0xA0;
 		const U8 NOP = 0x90;
@@ -90,13 +91,14 @@ namespace ISA
 		U32 address;
 	};
 
+	// FIXME: incorrect opcodes
+	_OP_DEF(ADD, ArithmeticInstruction);
 
-	_OP_DEF(ADD, 0x00, ArithmeticInstruction);
-
-	_OP_DEF(JO, 0x70, JumpInstruction); // FIXME: incorrect opcode
-		
-	_OP_DEF(XCHG, 0x90, MemoryInstruction);
-	_OP_DEF(MOV, 0xA0, MemoryInstruction);
+	_OP_DEF(JO, JumpInstruction); 
+	_OP_DEF(JNO, JumpInstruction);
+	
+	_OP_DEF(XCHG, MemoryInstruction);
+	_OP_DEF(MOV, MemoryInstruction);
 	
 
 	namespace Memory
@@ -113,5 +115,6 @@ namespace ISA
 	namespace Jumps
 	{
 		using ISA::JO;
+		using ISA::JNO;
 	};
 }

@@ -97,7 +97,7 @@ struct Registers
 	bit flag_read_VIP() const { return bool(EFLAGS & 0x10'0000); } // Virtual Interrupt Pending Flag
 	bit flag_read_ID() const { return bool(EFLAGS & 0x20'0000); }  // Identification Flag
 
-	/* Carry Flag */ void flag_write_CF(bit value) { EFLAGS |= value * 0x001; }     // 
+    void flag_write_CF(bit value) { EFLAGS |= value * 0x001; }     // Carry Flag
 	void flag_write_PF(bit value) { EFLAGS |= value * 0x004; }	   // Parity Flag
 	void flag_write_AF(bit value) { EFLAGS |= value * 0x010; }	   // Adjust Flag
 	void flag_write_ZF(bit value) { EFLAGS |= value * 0x040; }	   // Zero Flag
