@@ -32,19 +32,19 @@ namespace ISA
 		const U8 CH = 17;
 		const U8 DH = 18;
 		const U8 BH = 19;
-		const U8 SPH = 20;
+		/*const U8 SPH = 20;
 		const U8 BPH = 21;
 		const U8 SIH = 22;
-		const U8 DIH = 23;
+		const U8 DIH = 23;*/
 
 		const U8 AL = 24;
 		const U8 CL = 25;
 		const U8 DL = 26;
 		const U8 BL = 27;
-		const U8 SPL = 28;
+		/*const U8 SPL = 28;
 		const U8 BPL = 29;
 		const U8 SIL = 30;
-		const U8 DIL = 31;
+		const U8 DIL = 31;*/
 	};
 
 	namespace Opcodes
@@ -55,22 +55,17 @@ namespace ISA
 		const U8 XCHG = 0x90;
 		const U8 MOV = 0xA0;
 		const U8 NOP = 0x90;
+
+		const U8 STOP = 0xFF; // temp
 	};
 
 	struct Instruction {
 		virtual U8 opcode() const { return -1; }
 	};
-
-	struct SomeInstruction : public Instruction
-	{
-		SomeInstruction(U8 some_parameter) : some_parameter(some_parameter) {}
-
-		U8 some_parameter;
-	};
-
+	
 	struct MemoryInstruction : public Instruction
 	{
-		MemoryInstruction(U8 source, U8 destination) : source(source), destination(destination) {}
+		MemoryInstruction(U8 destination, U8 source) : destination(destination), source(source) {}
 
 		U8 destination;
 		U8 source;
@@ -100,6 +95,7 @@ namespace ISA
 	_OP_DEF(XCHG, MemoryInstruction);
 	_OP_DEF(MOV, MemoryInstruction);
 	
+	_OP_DEF(STOP, Instruction);
 
 	namespace Memory
 	{
