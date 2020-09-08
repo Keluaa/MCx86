@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 
+#include <cmath>
 #include <type_traits>
 
 #include "data_types.h"
@@ -98,7 +99,7 @@ namespace ALU
 	template<typename A, typename B>
 	constexpr bit compare_greater_or_equal(A a, B b)
 	{
-		bit equal;
+		bit equal = 0;
 		return compare_greater_or_equal(a, b, equal);
 	}
 
@@ -249,7 +250,7 @@ namespace ALU
 			mask >>= 1;
 		}
 
-		unsigned int min_shift;
+		unsigned int min_shift = 0;
 		if (compare_greater_or_equal(min_n, min_d)) {
 			min_shift = min_d;
 		}

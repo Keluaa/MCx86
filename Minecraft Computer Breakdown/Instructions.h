@@ -1,14 +1,14 @@
-#pragma once
+﻿#pragma once
 
 #include "data_types.h"
 
 
-#define _OP_DEF(name, instruction_class) struct name : public instruction_class { const U8 opcode = Opcodes::name; using instruction_class::instruction_class; }
+#define _OP_DEF(name, instruction_class) struct name : public instruction_class { using instruction_class::instruction_class; virtual U8 opcode() const { return Opcodes::name; } }
 
 
 namespace ISA 
 {
-	namespace Resigters
+	namespace Registers
 	{
 		const U8 EAX = 0;
 		const U8 ECX = 1;
@@ -58,10 +58,10 @@ namespace ISA
 	};
 
 	struct Instruction {
-		const U8 opcode = -1;
+		virtual U8 opcode() const { return -1; }
 	};
 
-	struct SomeInstruction : public Instruction 
+	struct SomeInstruction : public Instruction
 	{
 		SomeInstruction(U8 some_parameter) : some_parameter(some_parameter) {}
 
@@ -72,10 +72,10 @@ namespace ISA
 	{
 		MemoryInstruction(U8 source, U8 destination) : source(source), destination(destination) {}
 
-		U8 source;
 		U8 destination;
+		U8 source;
 	};
-
+	
 	struct ArithmeticInstruction : public Instruction
 	{
 		ArithmeticInstruction(U8 destination, U8 operand) : destination(destination), operand(operand) {}
