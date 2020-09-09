@@ -7,7 +7,7 @@
 #include "registers.h"
 #include "RAM.h"
 #include "ROM.h"
-#include "Instructions.h"
+#include "instructions.hpp"
 
 void load_fibbonacci(ISA::Instruction** instructions, const int instructions_count)
 {

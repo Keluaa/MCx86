@@ -155,7 +155,8 @@
   <ItemGroup>
     <ClInclude Include="ALU.h" />
     <ClInclude Include="data_types.h" />
-    <ClInclude Include="Instructions.h" />
+    <ClInclude Include="IA-32_decoder.h" />
+    <ClInclude Include="instructions.hpp" />
     <ClInclude Include="RAM.h" />
     <ClInclude Include="registers.h" />
     <ClInclude Include="ROM.h" />

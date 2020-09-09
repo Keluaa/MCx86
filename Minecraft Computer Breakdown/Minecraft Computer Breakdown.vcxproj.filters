@@ -30,7 +30,10 @@
     <ClInclude Include="registers.h">
       <Filter>Fichiers sources</Filter>
     </ClInclude>
-    <ClInclude Include="Instructions.h">
+    <ClInclude Include="instructions.hpp">
+      <Filter>Fichiers sources</Filter>
+    </ClInclude>
+    <ClInclude Include="IA-32_decoder.h">
       <Filter>Fichiers sources</Filter>
     </ClInclude>
   </ItemGroup>
