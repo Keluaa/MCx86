@@ -27,6 +27,10 @@ void load_fibbonacci(ISA::Instruction** instructions, const int instructions_cou
 
 int main()
 {
+	Instruction_2 test;
+	test.Prefix.p_4 = 0;
+	
+	
 	Registers registers;
  
 	const int instructions_count = 6;
@@ -118,5 +122,5 @@ int main()
 			delete instructions[i];
 		}	
 	}
-	delete instructions;
+	delete[] instructions;
 }
