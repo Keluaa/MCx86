@@ -1,6 +1,7 @@
 ﻿ 
 #include <iostream>
 #include <bitset>
+#include <exception>
  
 #include "data_types.h"
 #include "ALU.hpp"
@@ -54,6 +55,17 @@ void load_fibbonacci(Inst** instructions, const int instructions_count)
 }
 
 
+class BadInstruction : public std::exception
+{
+	const char* msg;
+	const int pos;
+
+public:
+	BadInstruction(const char* msg, const int pos) 
+		: msg(msg), pos(pos) {}
+		
+	// TODO
+};
 
 
 void update_overflow_flag(Registers& registers, U32 op1, U32 op2, U32 result)
@@ -236,13 +248,33 @@ int main()
 		}
 		case ISA::Opcodes::XCHG:
 		{
-			// XCHG is restricted to exchange anything with the accumulator register.
-			// here it is a general implementation for simplicity.
-
-
-			U32 tmp = registers.read(inst->op);
-			registers.write(inst->destination, registers.read(inst->source));
-			registers.write(inst->source, tmp);
+			// op1 <-op2
+			switch (inst->op1_type) {
+			case Inst::R:
+				registers.write(inst->op1, op2_val);
+				break;
+			case Inst::M:
+				ram.write(inst->op1, op2_val);
+				break;
+			default:
+				throw BadInstruction("Wrong type of operand for XCHG", registers.EIP);
+			}
+			// op2 <- op1
+			switch (inst->op2_type) {
+			case Inst::R:
+				registers.write(inst->op2, op1_val);
+				break;
+			case Inst::M:
+				ram.write(inst->op2, op1_val);
+				break;
+			default:
+				throw BadInstruction("Wrong type of operand for XCHG", registers.EIP);
+			}
+			break;
+		}
+		case ISA::Opcodes::MUL:
+		{
+			
 			break;
 		}
 		case ISA::Opcodes::STOP:
@@ -252,7 +284,7 @@ int main()
 			continue;
 		}
 		default:
-			std::cout << "Unknown instruction: " << std::hex << (int) base_inst->opcode() << std::dec << "\n";
+			std::cout << "Unknown instruction: " << std::hex << (int) inst->opcode << std::dec << "\n";
 			return 1;
 		}
 		registers.EIP++;

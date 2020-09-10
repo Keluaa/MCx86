@@ -89,11 +89,16 @@ namespace ISA
 	{
 		// Approximate opcodes. Usually the lowest possible for each mnemonic.
 		const U8 ADD = 0x00;
+		
 		const U8 JO = 0x70;
 		const U8 JNO = 0x71;
-		const U8 XCHG = 0x90;
-		const U8 MOV = 0xA0;
+		
 		const U8 NOP = 0x90;
+		const U8 XCHG = 0x90;
+		
+		const U8 MOV = 0xA0;
+		
+		const U8 MUL = 0xF6;
 
 		const U8 STOP = 0xFF; // temp
 	};
