@@ -5,19 +5,21 @@
 #include "data_types.h"
 
 
-template<typename CELL_SIZE, unsigned int COUNT>
+template<typename CELL_SIZE, U32 SIZE>
 struct ROM
 {
-	CELL_SIZE bytes[COUNT];
-	
+private:
+	CELL_SIZE bytes[SIZE];
+
+public:
 	ROM()
 	{
-		std::memset(bytes, 0, COUNT);
+		std::memset(bytes, 0, SIZE);
 	}
 
 	void init(const CELL_SIZE* program, unsigned int size)
 	{
-		// used at initialisation
+		// used only at initialisation
 		std::memcpy(bytes, program, size);
 	}
 

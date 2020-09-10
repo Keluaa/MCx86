@@ -154,6 +154,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ALU.hpp" />
+    <ClInclude Include="CPU.h" />
     <ClInclude Include="data_types.h" />
     <ClInclude Include="IA-32_decoder.h" />
     <ClInclude Include="instructions.hpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="ROM.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CPU.cpp" />
     <ClCompile Include="Minecraft Computer Breakdown.cpp" />
   </ItemGroup>
   <ItemGroup>

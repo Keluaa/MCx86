@@ -4,7 +4,7 @@
 
 #include "data_types.h"
 
-template<unsigned int N>
+template<U32 N>
 struct RAM
 {
 	U8 bytes[N];

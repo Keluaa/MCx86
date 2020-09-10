@@ -36,9 +36,15 @@
     <ClInclude Include="ALU.hpp">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="CPU.h">
+      <Filter>Fichiers sources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Minecraft Computer Breakdown.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CPU.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
