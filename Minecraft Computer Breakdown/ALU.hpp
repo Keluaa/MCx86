@@ -63,7 +63,19 @@ namespace ALU
 		typename std::make_unsigned<N>::type mask = 1 << (sizeof(N) * 8 - 1);
 		return bool(n & mask);
 	}
-
+	
+	template<typename N>
+	constexpr bit check_parity(N n)
+	{
+		static_assert(std::is_integral<N>{}, "check_parity operand must be of integral type");
+		
+		bit res = 0;
+		typename std::make_unsigned<N>::type mask = 1;
+		for(int i = 0; i < sizeof(N) * 8; i++) {
+			res ^= bool(n & mask);
+		}
+		return res;
+	}
 
 	/*
 		Returns a >= b, with an additional flag if a == b.		
@@ -102,7 +114,6 @@ namespace ALU
 		bit equal = 0;
 		return compare_greater_or_equal(a, b, equal);
 	}
-
 
 	/*
 		Addition is implemented so that the sign of the operands doesn't matter.

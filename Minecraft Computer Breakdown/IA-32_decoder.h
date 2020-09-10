@@ -35,7 +35,7 @@ static Instruction_2 fromEncodedInstruction(const U8* bytes, int& pos)
 {
 	// see the reference used at section 2.1 - Instruction Format,
 	// and also at the Appendixes A and B of the Volume 2
-	// of the Intel® 64 and IA-32 Architectures Software Developer’s Manual
+	// of the Intelï¿½ 64 and IA-32 Architectures Software Developerï¿½s Manual
 	// at https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
 
 	U8 prefix_repeat = 0;

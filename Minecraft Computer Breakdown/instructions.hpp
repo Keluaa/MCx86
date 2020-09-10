@@ -7,18 +7,41 @@
 
 #define _OP_DEF(name, instruction_class) struct name : public instruction_class { using instruction_class::instruction_class; virtual U8 opcode() const { return Opcodes::name; } }
 
-struct new_Instruction
+
+struct Inst
 {
 	U8 opcode;
 
-	bit addressing_mode;
-	U32 displacement;
-	U32 immediate;
+	bit addressing_mode = 0;
+	I32 displacement = 0;
+	U32 immediate = 0;
 
-	enum OperandType { None, I, MR, R } operand_1_type, operand_2_type;
-	U8 operand_1_size, operand_2_size;
-	U8 operand_1, operand_2;
+	// types: None, Immediate, Memory, Register
+	enum OperandType { None, I, M, R }
+		op1_type = None, op2_type = None;
+	bit op1_size = 0, op2_size = 0; // 0 -> 32 - 1 -> 8 or 16 if addressing_mode == 1
+	U8 op1 = 0, op2 = 0;
 };
+
+void sizeFromRegister(U8 register_, bit& size, bit& addressing_mode)
+{
+	if (register_ < 8) {
+		size = 0;
+		addressing_mode = 0;
+	}
+	else if (register_ < 16) {
+		size = 1;
+		addressing_mode = 1;
+	}
+	else if (register_ < 24) {
+		size = 1;
+		addressing_mode = 0;
+	}
+	else if (register_ < 32) {
+		size = 1;
+		addressing_mode = 0;
+	}
+}
 
 
 namespace ISA 
@@ -64,6 +87,7 @@ namespace ISA
 
 	namespace Opcodes
 	{
+		// Approximate opcodes. Usually the lowest possible for each mnemonic.
 		const U8 ADD = 0x00;
 		const U8 JO = 0x70;
 		const U8 JNO = 0x71;
@@ -100,9 +124,37 @@ namespace ISA
 
 		U32 address;
 	};
+	
+	const Inst* ADD(Inst::OperandType op1_type,
+				    U8 op1, bit op1_size = 0,
+			 	    Inst::OperandType op2_type = Inst::None,
+			 	    U8 op2 = 0, bit op2_size = 0,
+				    bit mode_16bit = 0,
+					I32 displacement = 0,
+					U32 immediate = 0)
+	{
+		if (op1_type == Inst::R) {
+			sizeFromRegister(op1, op1_size, mode_16bit);
+		}
+		if (op2_type == Inst::R) {
+			sizeFromRegister(op2, op2_size, mode_16bit);
+		}
+		
+		return new Inst{
+			ISA::Opcodes::ADD,
+			mode_16bit,
+			displacement,
+			immediate,
+			op1_type, op2_type,
+			op1_size, op2_size,
+			op1,	  op2
+		};
+	}
+	
+	
 
 	// FIXME: incorrect opcodes
-	_OP_DEF(ADD, ArithmeticInstruction);
+	//_OP_DEF(ADD, ArithmeticInstruction);
 
 	_OP_DEF(JO, JumpInstruction); 
 	_OP_DEF(JNO, JumpInstruction);
