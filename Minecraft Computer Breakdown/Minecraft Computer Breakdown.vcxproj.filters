@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ALU.h">
-      <Filter>Fichiers sources</Filter>
-    </ClInclude>
     <ClInclude Include="data_types.h">
       <Filter>Fichiers sources</Filter>
     </ClInclude>
@@ -35,6 +32,9 @@
     </ClInclude>
     <ClInclude Include="IA-32_decoder.h">
       <Filter>Fichiers sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ALU.hpp">
+      <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

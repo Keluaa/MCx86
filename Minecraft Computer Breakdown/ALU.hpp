@@ -64,6 +64,9 @@ namespace ALU
 		return bool(n & mask);
 	}
 	
+	/*
+		Returns 1 if there is an even number of bits in n, 0 otherwise.
+	*/
 	template<typename N>
 	constexpr bit check_parity(N n)
 	{
@@ -74,7 +77,7 @@ namespace ALU
 		for(int i = 0; i < sizeof(N) * 8; i++) {
 			res ^= bool(n & mask);
 		}
-		return res;
+		return !res;
 	}
 
 	/*
