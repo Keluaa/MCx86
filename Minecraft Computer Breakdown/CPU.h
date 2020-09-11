@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <exception>
 
@@ -10,31 +10,35 @@
 #include "ROM.h"
 
 
-class BadInstruction : public std::exception
+class ExceptionWithMsg : public std::exception
 {
+protected:
 	const char* msg;
 
 public:
-	BadInstruction() : msg("") {}
-
-	BadInstruction(const char* msg, const int pos) noexcept
-	{
-		const int buffer_size = strlen(msg) + 20;
-		char* buffer = new char[];
-		snprintf(buffer, buffer_size, "'%s' at %d", msg, pos);
-		this->msg = buffer;
-	}
-
-	~BadInstruction() { delete msg; }
-
+	ExceptionWithMsg() noexcept : msg("") {}
+	
+	~ExceptionWithMsg() { delete msg; }
+	
 	virtual const char* what() const noexcept { return msg; }
 };
 
 
-class StopInstruction : public std::exception
+class BadInstruction : public ExceptionWithMsg
 {
-	const char* msg;
+public:
+	BadInstruction(const char* msg, const int pos) noexcept
+	{
+		const int buffer_size = strlen(msg) + 20;
+		char* buffer = new char[buffer_size];
+		snprintf(buffer, buffer_size, "'%s' at %d", msg, pos);
+		this->msg = buffer;
+	}
+};
 
+
+class StopInstruction : public ExceptionWithMsg
+{
 public:
 	StopInstruction(const int pos) noexcept
 	{
@@ -42,10 +46,18 @@ public:
 		snprintf(buffer, 50, "Stop instruction reached at %d", pos);
 		this->msg = buffer;
 	}
+};
 
-	~StopInstruction() { delete msg; }
 
-	virtual const char* what() const noexcept { return msg; }
+class NotImplemented : public ExceptionWithMsg
+{
+public:
+	NotImplemented(const U8 opcode, const int pos) noexcept
+	{
+		char buffer[50];
+		snprintf(buffer, 50, "Instruction %x at %d not implemented", (int)opcode, pos);
+		this->msg = buffer;
+	}
 };
 
 

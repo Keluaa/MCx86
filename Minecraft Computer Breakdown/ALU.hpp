@@ -76,6 +76,7 @@ namespace ALU
 		typename std::make_unsigned<N>::type mask = 1;
 		for(int i = 0; i < sizeof(N) * 8; i++) {
 			res ^= bool(n & mask);
+			mask <<= 1;
 		}
 		return !res;
 	}
@@ -117,7 +118,47 @@ namespace ALU
 		bit equal = 0;
 		return compare_greater_or_equal(a, b, equal);
 	}
-
+	
+	
+	template<typename A, typename B>
+	constexpr A and_(A a, B b)
+	{
+		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "and operands must be of integral type");
+		static_assert(sizeof(A) >= sizeof(B), "First operand of 'and' must have at least the same bit length than the second");
+		
+		// flat bitwise operation: each result bits are independant from each other
+		return a & b;
+	}
+	
+	template<typename A, typename B>
+	constexpr A or_(A a, B b)
+	{
+		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "or operands must be of integral type");
+		static_assert(sizeof(A) >= sizeof(B), "First operand of 'or' must have at least the same bit length than the second");
+		
+		// flat bitwise operation: each result bits are independant from each other
+		return a | b;
+	}
+	
+	template<typename A, typename B>
+	constexpr A xor_(A a, B b)
+	{
+		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "xor operands must be of integral type");
+		static_assert(sizeof(A) >= sizeof(B), "First operand of 'xor' must have at least the same bit length than the second");
+		
+		// flat bitwise operation: each result bits are independant from each other
+		return a ^ b;
+	}
+	
+	template<typename N>
+	constexpr N not_(N n)
+	{
+		static_assert(std::is_integral<N>{}, "not operands must be of integral type");
+		
+		// flat bitwise operation: each result bits are independant from each other
+		return ~n;
+	}
+	
 	/*
 		Addition is implemented so that the sign of the operands doesn't matter.
 		This means that the same algorithm can be used for substraction if b < 0.

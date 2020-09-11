@@ -1,4 +1,4 @@
-
+﻿
 #include <iostream>
 
 #include "CPU.h"
@@ -84,7 +84,34 @@ void CPU::execute_instruction()
 		bit carry = 0;
 		op1_val_out = ALU::add(op1_val, op2_val, carry);
 		op1_val_out_set = 1;
+		
 		update_status_flags(op1_val, op2_val, op1_val_out, (inst->op1_type == Inst::R ? inst->op1 : -1), carry);
+		break;
+	}
+	case ISA::Opcodes::ADC:
+	{
+		bit carry = registers.flag_read_CF();
+		op1_val_out = ALU::add(op1_val, op2_val, carry);
+		op1_val_out_set = 1;
+		
+		update_status_flags(op1_val, op2_val, op1_val_out, (inst->op1_type == Inst::R ? inst->op1 : -1), carry);
+		break;
+	}
+	case ISA::Opcodes::AND:
+	{
+		op1_val_out = ALU::and_(op1_val, op2_val);
+		op1_val_out_set = 1;
+		
+		registers.flag_write_CF(0);
+		registers.flag_write_OF(0);
+		update_parity_flag(op1_val_out);
+		update_sign_flag(op1_val_out);
+		update_zero_flag(op1_val_out);
+		break;
+	}
+	case ISA::Opcodes::BOUND:
+	{
+		throw NotImplemented(inst->opcode, registers.EIP);
 	}
 	case ISA::Opcodes::MOV:
 	{
