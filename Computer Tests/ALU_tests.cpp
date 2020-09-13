@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
 
-#include "ALU.h"
+#include "ALU.hpp"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -12,8 +12,8 @@ namespace ComputerTests
 	public:
 		TEST_METHOD(negate_positive_1)
 		{
-			U32 n = 1;
-			U32 r = ALU::negate(n);
+			I32 n = 1;
+			I32 r = ALU::negate(n);
 
 			Assert::IsTrue(-n == r);
 		}
@@ -38,7 +38,6 @@ namespace ComputerTests
 	TEST_CLASS(ALU_add_tests)
 	{
 	public:
-		
 		TEST_METHOD(add_positive)
 		{
 			U32 a = 1;
@@ -118,7 +117,6 @@ namespace ComputerTests
 	TEST_CLASS(ALU_divide_tests)
 	{
 	public:
-
 		TEST_METHOD(divide_positive)
 		{
 			U32 n = 64;
@@ -143,4 +141,32 @@ namespace ComputerTests
 			Assert::IsTrue(divByZero);
 		}
 	};
+
+	TEST_CLASS(ALU_get_bit_at_tests) 
+	{
+	public:
+		TEST_METHOD(get_bit_at)
+		{
+			U32 n = 1;
+			for (int i = 0; i < sizeof(U32) * 8; i++) {
+				for (int j = 0; j < sizeof(U32) * 8; j++) {
+					bit i_bit = ALU::get_bit_at(n, j);
+
+					Assert::AreEqual(i_bit, i == j);
+				}
+
+				n <<= 1;
+			}
+		}
+
+		TEST_METHOD(get_and_set_bit_at)
+		{
+			U32 n = 0x400;
+			bit i_bit = ALU::get_and_set_bit_at(n, 0b01010, 0);
+
+			Assert::IsTrue(i_bit);
+			Assert::IsTrue(n == 0);
+		}
+	};
+
 }

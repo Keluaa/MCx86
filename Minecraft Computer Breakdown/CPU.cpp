@@ -3,6 +3,19 @@
 
 #include "CPU.h"
 
+#define NYI throw NotImplemented(opcode, registers.EIP)
+
+CPU::CPU(const Inst** instructions, const U32 count)
+	: instructions(instructions), instructions_count(count) 
+{
+	switch_protected_mode(); // use protected mode by default
+}
+
+void CPU::switch_protected_mode(bit protected_)
+{
+	registers.control_flag_write_PE(protected_);
+}
+
 void CPU::run()
 {
 	const int max_cycles = 1000;
@@ -17,12 +30,8 @@ void CPU::run()
 		try {
 			execute_instruction(); // increments the EIP register
 		}
-		catch (BadInstruction& badInst) {
-			std::cerr << badInst.what() << "\n";
-			break;
-		}
-		catch (StopInstruction& stop) {
-			std::cout << stop.what() << "\n";
+		catch (ExceptionWithMsg& e) {
+			std::cerr << e.what() << "\n";
 			break;
 		}
 	}
@@ -34,6 +43,9 @@ void CPU::execute_instruction()
 {
 	const Inst* inst = instructions[registers.EIP];
 
+	ALU::branchMonitor.reset();
+
+	// fetch the value of the first operand
 	U32 op1_val = 0;
 	switch (inst->op1_type)
 	{
@@ -53,6 +65,7 @@ void CPU::execute_instruction()
 		break;
 	}
 
+	// fetch the value of the second operand
 	U32 op2_val = 0;
 	switch (inst->op2_type)
 	{
@@ -76,21 +89,100 @@ void CPU::execute_instruction()
 	U32 op1_val_out = 0;
 
 	// perform the instruction
+	U16 opcode = inst->two_bytes_opcode ? (0x0F00 + inst->opcode) : inst->opcode;
+	switch (opcode)
+	{
+	case ISA::Opcodes::AAA:
+	{
+		U16 AX_val = registers.read(ISA::Registers::AX);
+		// if AF is set or if the first 4 bits of AL are greater than 9 
+		if (registers.flag_read_AF() ||
+				ALU::compare_greater_or_equal(AX_val & 0x0F, 10)) {
+			// we do
+			// AL <- (AL + 6) and 0x0F
+			// AH <- AH + 1
+			// but in one step:
+			// AX <- (AH + 1) : (AL + 6) & 0x0F
+			// or:
+			// AX <- (AX + 0x0106) & 0x0F0F <- 0F0F mask because we are doing BCD operations
+			// this is because the adder can only be used once per clock cycle
+			registers.write(ISA::Registers::AX, ALU::add_no_carry(AX_val, (U16) 0x0106) & 0x0F0F);
+			
+			registers.flag_write_AF(1);
+			registers.flag_write_CF(1);
+		}
+		else {
+			registers.flag_write_AF(0);
+			registers.flag_write_CF(0);
+		}
+		break;
+	}
+	case ISA::Opcodes::AAD:
+	{
+		U8 AH_val = registers.read(ISA::Registers::AH);
+		U8 AL_val = registers.read(ISA::Registers::AL);
 
-	switch (inst->opcode)
+		AL_val = ALU::add_no_carry(ALU::multiply(AH_val, (U8)10), AL_val);
+
+		registers.write(ISA::Registers::AL, AL_val);
+		registers.write(ISA::Registers::AH, 0);
+
+		update_sign_flag(AL_val);
+		update_zero_flag(AL_val);
+		update_parity_flag(AL_val);
+		break;
+	}
+	case ISA::Opcodes::AAM:
 	{
-	case ISA::Opcodes::ADD:
-	{
-		bit carry = 0;
-		op1_val_out = ALU::add(op1_val, op2_val, carry);
-		op1_val_out_set = 1;
+		U8 q, r;
+		bit divByZero;
+		ALU::unsigned_divide((U8) registers.read(ISA::Registers::AL), (U8)10, q, r, divByZero);
 		
-		update_status_flags(op1_val, op2_val, op1_val_out, (inst->op1_type == Inst::R ? inst->op1 : -1), carry);
+		registers.write(ISA::Registers::AH, q);
+		registers.write(ISA::Registers::AL, r);
+
+		update_sign_flag(r);
+		update_zero_flag(r);
+		update_parity_flag(r);
+		break;
+	}
+	case ISA::Opcodes::AAS:
+	{
+		U16 AX_val = registers.read(ISA::Registers::AX);
+		// if AF is set or if the first 4 bits of AL are greater than 9 
+		if (registers.flag_read_AF() ||
+				ALU::compare_greater_or_equal(AX_val & 0x0F, 10)) {
+			// we do:
+			// AL <- (AL - 6) & 0x0F
+			// AH <- AH - 1
+			// but in one step:
+			// AX <- (AX + ((-1 << 8) + (-6 & 0x0F))) & 0xFF0F
+			// notice: -6 & 0x0F = 0x0A
+			// and then: (-1 << 8) + (-6 & 0x0F) = 0xFF0A
+			// This is for the same reason as for the AAA instruction
+			registers.write(ISA::Registers::AX, ALU::add_no_carry(AX_val, (U16)0xFF0A) & 0xFF0F);
+
+			registers.flag_write_AF(1);
+			registers.flag_write_CF(1);
+		}
+		else {
+			registers.flag_write_AF(0);
+			registers.flag_write_CF(0);
+		}
 		break;
 	}
 	case ISA::Opcodes::ADC:
 	{
 		bit carry = registers.flag_read_CF();
+		op1_val_out = ALU::add(op1_val, op2_val, carry);
+		op1_val_out_set = 1;
+
+		update_status_flags(op1_val, op2_val, op1_val_out, (inst->op1_type == Inst::R ? inst->op1 : -1), carry);
+		break;
+	}
+	case ISA::Opcodes::ADD:
+	{
+		bit carry = 0;
 		op1_val_out = ALU::add(op1_val, op2_val, carry);
 		op1_val_out_set = 1;
 		
@@ -109,9 +201,91 @@ void CPU::execute_instruction()
 		update_zero_flag(op1_val_out);
 		break;
 	}
+	case ISA::Opcodes::ARPL:
+	{
+		// compare the first two bits of the operands, and branch if op1 < op2
+		if (!ALU::compare_greater_or_equal(op1_val & 0x03, op2_val & 0x03)) {
+			// copy the first two bits of op2 to the first two bits of op1
+			op1_val_out = (op1_val & (0xFF - 0x03)) | (op2_val & 0x03);
+			op1_val_out_set = 1;
+
+			registers.flag_write_ZF(1);
+		}
+		else {
+			registers.flag_write_ZF(0);
+		}
+		break;
+	}
 	case ISA::Opcodes::BOUND:
 	{
-		throw NotImplemented(inst->opcode, registers.EIP);
+		NYI;
+	}
+	case ISA::Opcodes::BSF:
+	{
+		bit isZero;
+		op1_val_out = ALU::get_first_set_bit_index(op1_val, isZero);
+		op1_val_out_set = 1;
+
+		registers.flag_write_ZF(isZero);
+		break;
+	}
+	case ISA::Opcodes::BSR:
+	{
+		bit isZero;
+		op1_val_out = ALU::get_last_set_bit_index(op1_val, isZero);
+		op1_val_out_set = 1;
+
+		registers.flag_write_ZF(isZero);
+		break;
+	}
+	case ISA::Opcodes::BT:
+	{
+		if (inst->op1_type == Inst::M) {
+			WARNING("The BT instruction has an incomplete implementation for memomry operands.")
+		}
+		
+		bit bit_val = ALU::get_bit_at(op1_val, op2_val);
+		registers.flag_write_CF(bit_val);
+		break;
+	}
+	case ISA::Opcodes::BTC:
+	{
+		if (inst->op1_type == Inst::M) {
+			WARNING("The BTC instruction has an incomplete implementation for memomry operands.")
+		}
+
+		bit bit_val = ALU::get_bit_at(op1_val, op2_val);
+		registers.flag_write_CF(!bit_val);
+		break;
+	}
+	case ISA::Opcodes::BTR:
+	{
+		if (inst->op1_type == Inst::M) {
+			WARNING("The BTR instruction has an incomplete implementation for memomry operands.")
+		}
+
+		bit bit_val = ALU::get_and_set_bit_at(op1_val, op2_val, 0);
+		op1_val_out = op1_val;
+		op1_val_out_set = 1;
+		registers.flag_write_CF(bit_val);
+		break;
+	}
+	case ISA::Opcodes::BTS:
+	{
+		if (inst->op1_type == Inst::M) {
+			WARNING("The BTS instruction has an incomplete implementation for memomry operands.")
+		}
+
+		bit bit_val = ALU::get_and_set_bit_at(op1_val, op2_val, 1);
+		op1_val_out = op1_val;
+		op1_val_out_set = 1;
+		registers.flag_write_CF(bit_val);
+		break;
+	}
+	case ISA::Opcodes::CALL:
+	{
+		NYI;
+		break;
 	}
 	case ISA::Opcodes::MOV:
 	{
@@ -195,15 +369,14 @@ void CPU::execute_instruction()
 	default:
 	{
 		char buffer[50];
-		snprintf(buffer, 50, "Unknown instruction: %x", (int)inst->opcode);
+		snprintf(buffer, 50, "Unknown instruction: %x", (int)opcode);
 		throw BadInstruction(buffer, registers.EIP);
 	}
 	}
 	registers.EIP++;
 
-	// write new values back to registers / memory
-
 	if (op1_val_out_set) {
+		// write the new value back to its register / memory address
 		switch (inst->op1_type)
 		{
 		case Inst::R: // Register
@@ -219,6 +392,11 @@ void CPU::execute_instruction()
 			break;
 		}
 	}
+}
+
+void CPU::push_2(U16 value)
+{
+
 }
 
 void CPU::update_overflow_flag(U32 op1, U32 op2, U32 result)

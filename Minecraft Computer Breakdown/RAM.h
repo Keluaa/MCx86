@@ -14,11 +14,15 @@ struct RAM
 		std::memset(bytes, 0, N);
 	}
 
+	U32 to_physical_address(U16 segment, U32 address)
+	{
+		// TODO : descriptors tables, global and local, etc...  (p. 95)
+	}
+
 	U8 read(U32 address) const
 	{
 		return bytes[address];
 	}
-
 	
 	void write(U32 address, U8 value)
 	{

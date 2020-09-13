@@ -154,8 +154,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ALU.hpp" />
+    <ClInclude Include="circuit_branch_monitor.h" />
     <ClInclude Include="CPU.h" />
     <ClInclude Include="data_types.h" />
+    <ClInclude Include="exceptions.h" />
     <ClInclude Include="IA-32_decoder.h" />
     <ClInclude Include="instructions.hpp" />
     <ClInclude Include="RAM.h" />

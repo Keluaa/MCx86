@@ -14,6 +14,27 @@ public:
 		: msg(msg), pos(pos) {}
 };
 
+
+inline void sizeFromRegister(U8 register_, bit& size, bit& addressing_mode)
+{
+	if (register_ < 8) {
+		// EAX to EDI
+		size = 0;
+		addressing_mode = 0;
+	}
+	else if (register_ < 16) {
+		// AX to DI
+		size = 1;
+		addressing_mode = 1;
+	}
+	else if (register_ < 32) {
+		// AH to BL
+		size = 1;
+		addressing_mode = 0;
+	}
+}
+
+
 struct Instruction_2
 {
 	U8 prefix_repeat;

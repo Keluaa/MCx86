@@ -1,10 +1,9 @@
 ﻿#pragma once
 
-#include <cmath>
 #include <type_traits>
 
 #include "data_types.h"
-
+#include "circuit_branch_monitor.h"
 
 /*
 	Mimics the behaviour of all functionnalities of the ALU, using only the basic operations available.
@@ -17,15 +16,25 @@
 
 	All loops parsing each bit of a integer are unrolled in the circuit for each bit (32 times).
 	This means that in order to minimize lag, we must minimize the number of operations done at each iteration.
+
+	In the circuit implementation of the ALU, one sub circuit cannot be used more than once in each clock cycle.
+	A branch monitor object is used to make sure we don't try to use a branch more than once in a clock cycle,
+	which is called at the start of all functions in the ALU.
+	When a ALU function calls another with the flag '_internal_call' set to true, it means that in the circuit
+	implementation the entire circuit of the other function is copied next to the caller function's circuit, for
+	its own use.
 */
 
-namespace ALU 
+namespace ALU
 {
+	static CircuitBranchMonitor branchMonitor;
 
 	template<typename N>
-	constexpr bit check_equal_zero(N n)
+	constexpr bit check_equal_zero(N n, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "check_equal_zero operand must be of integral type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
 
 		typename std::make_unsigned<N>::type mask = 1;
 		for (int i = 0; i < sizeof(N) * 8; i++) {
@@ -40,9 +49,11 @@ namespace ALU
 
 
 	template<typename N>
-	constexpr bit check_different_than_zero(N n)
+	constexpr bit check_different_than_zero(N n, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "check_different_than_zero operand must be of integral type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
 
 		typename std::make_unsigned<N>::type mask = 1;
 		for (int i = 0; i < sizeof(N) * 8; i++) {
@@ -56,14 +67,18 @@ namespace ALU
 
 
 	template<typename N>
-	constexpr bit check_is_negative(N n)
+	constexpr bit check_is_negative(N n, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "check_is_negative operand must be of integral type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
 		// check if the last bit is set
 		typename std::make_unsigned<N>::type mask = 1 << (sizeof(N) * 8 - 1);
 		return bool(n & mask);
 	}
-	
+
+
 	/*
 		Returns 1 if there is an even number of bits in n, 0 otherwise.
 	*/
@@ -71,27 +86,32 @@ namespace ALU
 	constexpr bit check_parity(N n)
 	{
 		static_assert(std::is_integral<N>{}, "check_parity operand must be of integral type");
-		
+
+		USE_BRANCH(branchMonitor);
+
 		bit res = 0;
 		typename std::make_unsigned<N>::type mask = 1;
-		for(int i = 0; i < sizeof(N) * 8; i++) {
+		for (int i = 0; i < sizeof(N) * 8; i++) {
 			res ^= bool(n & mask);
 			mask <<= 1;
 		}
 		return !res;
 	}
 
+
 	/*
-		Returns a >= b, with an additional flag if a == b.		
+		Returns a >= b, with an additional flag if a == b.
 	*/
 	template<typename A, typename B>
-	constexpr bit compare_greater_or_equal(A a, B b, bit& equal)
+	constexpr bit compare_greater_or_equal(A a, B b, bit& equal, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "compare_greater_or_equal operands must be of integral type");
 		static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_greater_or_equal' must have at least the same bit length than the second");
 
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
 		typename std::make_unsigned<A>::type mask = 1 << (sizeof(A) * 8 - 1);
-		
+
 		for (int i = 0; i < sizeof(A) * 8; i++) {
 			if (((a & mask) ^ (b & mask)) == 0) { // a_i == b_i
 				mask >>= 1;
@@ -113,51 +133,161 @@ namespace ALU
 
 
 	template<typename A, typename B>
-	constexpr bit compare_greater_or_equal(A a, B b)
+	constexpr bit compare_greater_or_equal(A a, B b, bool _internal_call = false)
 	{
 		bit equal = 0;
-		return compare_greater_or_equal(a, b, equal);
+		return compare_greater_or_equal(a, b, equal, _internal_call);
 	}
-	
-	
+
+
 	template<typename A, typename B>
 	constexpr A and_(A a, B b)
 	{
 		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "and operands must be of integral type");
 		static_assert(sizeof(A) >= sizeof(B), "First operand of 'and' must have at least the same bit length than the second");
-		
+
+		USE_BRANCH(branchMonitor);
+
 		// flat bitwise operation: each result bits are independant from each other
 		return a & b;
 	}
-	
+
+
 	template<typename A, typename B>
 	constexpr A or_(A a, B b)
 	{
 		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "or operands must be of integral type");
 		static_assert(sizeof(A) >= sizeof(B), "First operand of 'or' must have at least the same bit length than the second");
-		
+
+		USE_BRANCH(branchMonitor);
+
 		// flat bitwise operation: each result bits are independant from each other
 		return a | b;
 	}
-	
+
+
 	template<typename A, typename B>
 	constexpr A xor_(A a, B b)
 	{
 		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "xor operands must be of integral type");
 		static_assert(sizeof(A) >= sizeof(B), "First operand of 'xor' must have at least the same bit length than the second");
-		
+
+		USE_BRANCH(branchMonitor);
+
 		// flat bitwise operation: each result bits are independant from each other
 		return a ^ b;
 	}
-	
+
+
 	template<typename N>
 	constexpr N not_(N n)
 	{
-		static_assert(std::is_integral<N>{}, "not operands must be of integral type");
-		
+		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+
+		USE_BRANCH(branchMonitor);
+
 		// flat bitwise operation: each result bits are independant from each other
 		return ~n;
 	}
+
+
+	template<typename N>
+	constexpr U8 get_first_set_bit_index(N n, bit& isZero)
+	{
+		static_assert(std::is_integral<N>{}, "get_first_set_bit_index operand must be of integral type");
+
+		USE_BRANCH(branchMonitor);
+
+		typename std::make_unsigned<N>::type mask = 1;
+		for (int i = 0; i < sizeof(N) * 8; i++) {
+			if (n & mask) {
+				isZero = false;
+				return i;
+			}
+			mask <<= 1;
+		}
+
+		isZero = true;
+		return 0;
+	}
+
+
+	template<typename N>
+	constexpr U8 get_last_set_bit_index(N n, bit& isZero, bool _internal_call = false)
+	{
+		static_assert(std::is_integral<N>{}, "get_last_set_bit_index operand must be of integral type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+		typename std::make_unsigned<N>::type mask = 1 << (sizeof(N) * 8 - 1);
+		for (int i = sizeof(N) * 8 - 1; i >= 0; i--) {
+			if (n & mask) {
+				isZero = false;
+				return i;
+			}
+			mask >>= 1;
+		}
+
+		isZero = true;
+		return 0;
+	}
+
+
+	template<typename N>
+	constexpr bit get_and_set_bit_at(N& n, U8 pos, bit val, bool _internal_call = false, bool _no_set = false)
+	{
+		static_assert(std::is_integral<N>{}, "get_and_set_bit_at operand must be of integral type");
+		static_assert(sizeof(N) <= sizeof(U32), "get_and_set_bit_at operand must be a 32 bit type or smaller");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+		// This is implemented as a binairy tree in the circuit. 
+		// Go left if the i-th bit of pos is set, right otherwise.
+		// In the end the bit_mask has only one bit set, which is the target bit.
+		// All of this is strictly equivalent to '1 << pos'.
+		U32 bit_mask = 0xFFFFFFFF;
+		U8 offset = 0;
+		for (int i = 4; i >= 0; i--) {
+			if (pos & (1 << i)) {
+				offset += 1 << i;
+				switch (i) {
+				case 0: bit_mask &= 0x0001 << offset; break;
+				case 1: bit_mask &= 0x0003 << offset; break;
+				case 2: bit_mask &= 0x000F << offset; break;
+				case 3: bit_mask &= 0x00FF << offset; break;
+				case 4: bit_mask &= 0xFFFF << offset; break;
+				}
+			}
+			else {
+				switch (i) {
+				case 0: bit_mask &= 0x0001 << offset; break;
+				case 1: bit_mask &= 0x0003 << offset; break;
+				case 2: bit_mask &= 0x000F << offset; break;
+				case 3: bit_mask &= 0x00FF << offset; break;
+				case 4: bit_mask &= 0xFFFF << offset; break;
+				}
+			}
+		}
+
+		if (!_no_set) {
+			n &= ~bit_mask;
+			if (val) {
+				n |= bit_mask;
+			}
+		}
+
+		return bit(n & bit_mask);
+	}
+
+
+	template<typename N>
+	constexpr bit get_bit_at(N& n, U8 pos, bool _internal_call = false)
+	{
+		// 'get_bit_at' and 'get_and_set_bit_at' share the same circuit, 
+		// because they are very similar, and not much used.
+		return get_and_set_bit_at(n, pos, 0, _internal_call, true);
+	}
+	
 	
 	/*
 		Addition is implemented so that the sign of the operands doesn't matter.
@@ -165,11 +295,13 @@ namespace ALU
 		Here the algorithm is the pen and paper addition.
 	*/
 	template<typename A, typename B>
-	constexpr A add(A a, B b, bit& carry)
+	constexpr A add(A a, B b, bit& carry, bool _internal_call = false)
 	{
-		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "Multiply operands must be of integral type");
-		static_assert(sizeof(A) >= sizeof(B), "First operand of 'multiply' must have at least the same bit length than the second");
+		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "Add operands must be of integral type");
+		static_assert(sizeof(A) >= sizeof(B), "First operand of 'add' must have at least the same bit length than the second");
 
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+		
 		A stack = 0;
 		typename std::make_unsigned<A>::type mask = 1, tmp;
 		typename std::make_unsigned<A>::type _carry = bool(carry);
@@ -186,13 +318,13 @@ namespace ALU
 		carry = bool(_carry);
 		return stack;
 	}
-
+	
 
 	template<typename A, typename B>
-	constexpr A add_no_carry(A a, B b)
+	constexpr A add_no_carry(A a, B b, bool _internal_call = false)
 	{
 		bit carry = 0;
-		return add(a, b, carry);
+		return add(a, b, carry, _internal_call);
 	}
 	
 
@@ -201,9 +333,11 @@ namespace ALU
 		This can be interpreted as negating it.
 	*/
 	template<typename N>
-	constexpr N negate(N n)
+	constexpr N negate(N n, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "negate operand must be of integral type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
 
 		N out = 0;
 		typename std::make_unsigned<N>::type mask = 1;
@@ -225,6 +359,23 @@ namespace ALU
 	}
 
 
+	template<typename N>
+	constexpr N abs(N n, bool _internal_call = false)
+	{
+		static_assert(std::is_integral<N>{}, "abs operand must be of integral type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+		N res;
+		if (check_is_negative(n, true)) {
+			res = negate(n, true);
+		}
+		else {
+			res = n;
+		}
+	}
+
+
 	/*
 		Pen and paper multiplication.
 		Minimises the number of additions performed.
@@ -236,6 +387,8 @@ namespace ALU
 		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "Multiply operands must be of integral type");
 		static_assert(sizeof(A) >= sizeof(B), "First operand of 'multiply' must have at least the same bit length than the second");
 
+		USE_BRANCH(branchMonitor);
+
 		// cast to unsigned with the same bit length for all operands
 		typename std::make_unsigned<A>::type a_bits = a;
 		typename std::make_unsigned<A>::type b_bits = b;
@@ -243,7 +396,7 @@ namespace ALU
 		typename std::make_unsigned<A>::type stack_bits = 0;
 		for (int i = 0; i < sizeof(A) * 8; i++) {
 			if (b_bits & 1) {
-				stack_bits = add_no_carry(stack_bits, a_bits); // stack += a (overflow ignored)
+				stack_bits = add_no_carry(stack_bits, a_bits, true); // stack += a (overflow ignored)
 			}
 			a_bits <<= 1;
 			b_bits >>= 1;
@@ -264,17 +417,9 @@ namespace ALU
 		static_assert(std::is_unsigned<N>{} && std::is_unsigned<D>{}, "Unsigned Division operands must be unsigned");
 		static_assert(sizeof(N) >= sizeof(D), "Dividend must have at least the same bit length of the divisor");
 
-		if (check_equal_zero(d)) {
-			divByZero = true;
-			q = r = 0;
-			return;
-		}
-		else {
-			divByZero = false;
-		}
-
+		USE_BRANCH(branchMonitor);
+		
 		N _d = d; // make sure to have enough space for shifting later
-
 		q = 0;
 		
 		// This initialisation part searches for the minimum shift needed for an efficient division.
@@ -282,21 +427,12 @@ namespace ALU
 		// because if we don't we might substract n with only a fraction of d.
 		// This is equivalent to:
 		/*
-		int min_shift_num = get_most_significant_set_bit(n) - 1;
-		int min_shift_denom = sizeof(N) * 8 - get_most_significant_set_bit(_d);
-		int min_shift = min(min_shift_num, min_shift_denom)
+		U8 min_shift_num = get_last_set_bit_index(n) - 1;
+		U8 min_shift_denom = sizeof(N) * 8 - get_last_set_bit_index(_d);
+		U8 min_shift = min(min_shift_num, min_shift_denom)
 		*/
-		// with 'get_most_significant_set_bit' implemented the same way as for the loop over n:
+		U8 min_n = 0, min_d = 0xFF; // dummy value 0xFF, used for division by zero check
 		N mask = 1 << (sizeof(N) * 8 - 1);
-		unsigned int min_n = 0, min_d = 0;
-		for (int i = sizeof(N) * 8 - 1; i >= 0; i--) {
-			if (n & mask) {
-				min_n = i;
-				break;
-			}
-			mask >>= 1;
-		}
-		mask = 1 << (sizeof(N) * 8 - 1);
 		for (int i = 0; i < sizeof(N) * 8; i++) {
 			if (_d & mask) {
 				min_d = i;
@@ -305,8 +441,26 @@ namespace ALU
 			mask >>= 1;
 		}
 
-		unsigned int min_shift = 0;
-		if (compare_greater_or_equal(min_n, min_d)) {
+		if (min_d == 0xFF) {
+			divByZero = true;
+			q = r = 0;
+			return;
+		}
+		else {
+			divByZero = false;
+		}
+
+		mask = 1 << (sizeof(N) * 8 - 1);
+		for (int i = sizeof(N) * 8 - 1; i >= 0; i--) {
+			if (n & mask) {
+				min_n = i;
+				break;
+			}
+			mask >>= 1;
+		}
+		
+		U8 min_shift = 0;
+		if (compare_greater_or_equal(min_n, min_d, true)) {
 			min_shift = min_d;
 		}
 		else {
@@ -333,8 +487,8 @@ namespace ALU
 			q <<= 1;
 
 			if (can_compute) {
-				if (compare_greater_or_equal(n, _d, equal)) {
-					n = add_no_carry(n, negate(_d)); // n -= d
+				if (compare_greater_or_equal(n, _d, equal, true)) {
+					n = add_no_carry(n, negate(_d, true)); // n -= d
 					q |= 1;
 
 					if (equal) { // n == d
@@ -354,8 +508,8 @@ namespace ALU
 	{
 		static_assert(std::is_integral<N>{} && std::is_integral<D>{}, "Division operands must be of integral type");
 
-		typename std::make_unsigned<N>::type n_unsigned = std::abs(n);
-		typename std::make_unsigned<D>::type d_unsigned = std::abs(d);
+		typename std::make_unsigned<N>::type n_unsigned = abs(n, true);
+		typename std::make_unsigned<D>::type d_unsigned = abs(d, true);
 		
 		typename std::make_unsigned<N>::type q_unsigned, r_unsigned;
 
@@ -368,12 +522,12 @@ namespace ALU
 		q = q_unsigned;
 		r = r_unsigned;
 
-		bit sign = (check_is_negative(n)) ^ (check_is_negative(d));
+		bit sign = (check_is_negative(n, true)) ^ (check_is_negative(d, true));
 		if (sign) {
 			// the result is negative
-			q = negate(q);
-			if (check_different_than_zero(r)) {
-				r = add_no_carry(d, negate(r)); // reverse the remainder (r = d - r)
+			q = negate(q, true);
+			if (check_different_than_zero(r, true)) {
+				r = add_no_carry(d, negate(r, true), true); // reverse the remainder (r = d - r)
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-﻿ 
+﻿
 #include <iostream>
 #include <bitset>
  
@@ -29,7 +29,7 @@ const Inst** load_fibbonacci(U32& instructions_count)
 	instructions[i++] = with_new(Inst, ISA::Opcodes::JNO, $.displacement = -2);
 	instructions[i++] = with_new(Inst, ISA::Opcodes::STOP);
 
-	return instructions;
+	return (const Inst**) instructions;
 }
 
 int main()

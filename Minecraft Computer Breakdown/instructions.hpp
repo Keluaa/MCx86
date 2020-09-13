@@ -12,6 +12,8 @@ struct Inst
 {
 	U8 opcode;
 
+	bit two_bytes_opcode = 0;
+
 	bit addressing_mode = 0;
 	I32 displacement = 0;
 	U32 immediate = 0;
@@ -22,26 +24,6 @@ struct Inst
 	bit op1_size = 0, op2_size = 0; // 0 -> 32 - 1 -> 8 or 16 if addressing_mode == 1, not used yet
 	U8 op1 = 0, op2 = 0;
 };
-
-
-void sizeFromRegister(U8 register_, bit& size, bit& addressing_mode)
-{
-	if (register_ < 8) {
-		// EAX to EDI
-		size = 0;
-		addressing_mode = 0;
-	}
-	else if (register_ < 16) {
-		// AX to DI
-		size = 1;
-		addressing_mode = 1;
-	}
-	else if (register_ < 32) {
-		// AH to BL
-		size = 1;
-		addressing_mode = 0;
-	}
-}
 
 
 namespace ISA 
@@ -84,24 +66,46 @@ namespace ISA
 		// Approximate opcodes. Usually the lowest possible for each mnemonic.
 		const U8 ADD = 0x00;
 
-		const U8 IMUL = 0x0F;	
+		const U8 IMUL = 0x69;
 		const U8 ADC = 0x10;
 		
 		const U8 AND = 0x20;
+
+		const U8 AAA = 0x37;
+
+		const U8 AAS = 0x3F;
 		
 		const U8 BOUND = 0x62;
+		const U8 ARPL = 0x63;
 		
 		const U8 JO = 0x70;
 		const U8 JNO = 0x71;
 		
 		const U8 NOP = 0x90;
 		const U8 XCHG = 0x90;
+
+		const U8 CALL = 0x9A;
 		
 		const U8 MOV = 0xA0;
+
+		const U8 AAM = 0xD4;
+		const U8 AAD = 0xD5;
 		
 		const U8 MUL = 0xF6;
 
-
 		const U8 STOP = 0xFF; // specific to this implementation, not present in the circuit
+
+
+		// Two bytes opcodes, with the 0x0F prefix
+
+		const U16 BT = 0x0FA3;
+
+		const U16 BTS = 0x0FAB;
+
+		const U16 BTR = 0x0FB3;
+		
+		const U16 BTC = 0x0FBB;
+		const U16 BSF = 0x0FBC;
+		const U16 BSR = 0x0FBD;
 	};
 }
