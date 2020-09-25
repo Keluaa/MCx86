@@ -1,11 +1,15 @@
 ﻿#pragma once
 
+#include <stack>
+
 #include "data_types.h"
 #include "ALU.hpp"
 #include "instructions.hpp"
-#include "registers.h"
-#include "RAM.h"
+#include "instructions_2.hpp"
+#include "registers.hpp"
+#include "RAM.hpp"
 #include "ROM.h"
+//#include "memory_manager.hpp"
 #include "exceptions.h"
 
 
@@ -14,12 +18,30 @@ class CPU
 	Registers registers;
 	RAM<512> ram;
 	ROM<U32, 512> rom;
+	
+	// stack, supposedly stored at the segment pointed by the SS register
+	std::stack<U32> stack; // TODO : replace this with a low level implementation
 
 	const Inst** instructions;
 	const U32 instructions_count;
+	
+	U32 inst_get_operand(const Inst_2* inst, bool second = false) const;
+	U32 inst_get_address(const Inst_2* inst) const;
+	
+	void new_new_execute_instruction();
+	void new_execute_instruction();
+	
+	void execute_non_trivial_instruction(const Inst_2* inst);
+	void execute_trivial_instruction(const Inst_2* inst);
+	
+	bit is_32_bit_op_inst(bit op_prefix, bit D_flag_code_segment = 0) const;
+	bit is_32_bit_ad_inst(bit ad_prefix, bit D_flag_code_segment = 0) const;
 
 	void push_2(U16 value);
 	void push_4(U32 value);
+	
+	U16 pop_2();
+	U32 pop_4();
 
 	void update_overflow_flag(U32 op1, U32 op2, U32 result);
 	void update_sign_flag(U32 result);

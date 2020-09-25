@@ -25,18 +25,40 @@ struct Registers
 		else if (register_id < 16) {
 			return read_16(register_id);
 		}
-		else if (register_id < 24) {
+		else if (register_id < 20) {
 			return read_8_High(register_id);
 		}
-		else if (register_id < 32) {
+		else if (register_id < 24) {
 			return read_8_Low(register_id);
 		}
 		else {
 			throw std::logic_error("Wrong register id");
 		}
 	}
-
-	void write(const U8 register_id, const U32 new_value)
+	
+	template<typename N>
+	N read_index(U8 register_index) const
+	{
+		switch (sizeof(N))
+		{
+		case 1:
+			if (register_index < 4) {
+				// Low byte
+				return registers[register_index] & 0xFF;
+			} else {
+				// High byte
+				return (registers[register_index - 4] & 0xFF00) >> 8;
+			}
+		case 2:
+			return registers[register_index] & 0xFFFF;
+		case 4:
+			return registers[register_index];
+		default:
+			throw std::logic_error("Wrong register size");
+		}
+	}
+	
+	void write(const U8 register_id, const U32 new_value, const U32 other_value = 0)
 	{
 		if (register_id < 8) {
 			write_32(register_id, new_value);
@@ -44,11 +66,16 @@ struct Registers
 		else if (register_id < 16) {
 			write_16(register_id, new_value);
 		}
-		else if (register_id < 24) {
+		else if (register_id < 20) {
 			write_8_High(register_id, new_value);
 		}
-		else if (register_id < 32) {
+		else if (register_id < 24) {
 			write_8_Low(register_id, new_value);
+		}
+		else if (register_id == 24) {
+			// 64 bit assignment
+			write_32(0, new_value);
+			write_32(2, other_value);
 		}
 		else {
 			throw std::logic_error("Wrong register id");
@@ -159,14 +186,14 @@ struct Registers
 	bit control_flag_read_EM() const { return bool(control_registers[0] & (1 << 2)); }  // Emulation Flag
 	bit control_flag_read_TS() const { return bool(control_registers[0] & (1 << 3)); }  // Task Switched Flag
 	bit control_flag_read_ET() const { return bool(control_registers[0] & (1 << 4)); }  // Extension Type Flag
-	bit control_flag_read_PE() const { return bool(control_registers[0] & (1 << 31)); } // Paging Flag
+	bit control_flag_read_PG() const { return bool(control_registers[0] & (1 << 31)); } // Paging Flag
 	
 	void control_flag_write_PE(bit value) { control_registers[0] |= value * (1 << 0); }  // Protection Enable Flag
 	void control_flag_write_MP(bit value) { control_registers[0] |= value * (1 << 1); }  // Math Present Flag
 	void control_flag_write_EM(bit value) { control_registers[0] |= value * (1 << 2); }  // Emulation Flag
 	void control_flag_write_TS(bit value) { control_registers[0] |= value * (1 << 3); }  // Task Switched Flag
 	void control_flag_write_ET(bit value) { control_registers[0] |= value * (1 << 4); }  // Extension Type Flag
-	void control_flag_write_PE(bit value) { control_registers[0] |= value * (1 << 31); } // Paging Flag
+	void control_flag_write_PG(bit value) { control_registers[0] |= value * (1 << 31); } // Paging Flag
 
 	/*
 		Utilities

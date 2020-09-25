@@ -138,6 +138,33 @@ namespace ALU
 		bit equal = 0;
 		return compare_greater_or_equal(a, b, equal, _internal_call);
 	}
+	
+	
+	/*
+		Sign extend a signed number which has been converted to 
+		an unsigned type which is double its size.
+	*/
+	template<typename N>
+	constexpr N sign_extend(N n, bool _internal_call = false)
+	{
+		static_assert(std::is_integral<N>{}, "sign_extend operand must be of integral type");
+		static_assert(std::is_unsigned<N>{}, "sign_extend operand must be unsigned (to prevent auto-extend)");
+		
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+		N mask = 1 << (sizeof(N) * 8 / 2 - 1);  // start at the middle (previous end of n)
+		const bit fill = bool(n & mask);
+		mask <<= 1;
+		
+		if (fill) {
+			for (int i = 0; i < sizeof(N) * 8; i++) {
+				n |= mask;
+				mask <<= 1; 
+			}
+		}
+		
+		return n;
+	}
 
 
 	template<typename A, typename B>

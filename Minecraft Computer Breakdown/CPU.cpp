@@ -39,6 +39,212 @@ void CPU::run()
 	std::cout << "Program finished in " << cycle << " cycles.\n";
 }
 
+U32 CPU::inst_get_operand(const Inst_2* inst, bool second) const
+{
+	U8 register_index = second ? inst->op2_register : inst->op1_register;
+	U32 val;
+	if (inst->operand_byte_size_override) {
+		// 8 bit value
+		val = registers.read_index<U8>(register_index);
+	} else if (is_32_bit_op_inst(inst->operand_byte_size_override)) {
+		// 32 bit value
+		val = registers.read_index<U32>(register_index);
+	} else {
+		// 16 bit value
+		val = registers.read_index<U16>(register_index);
+	}
+	return val;
+}
+
+U32 CPU::inst_get_address(const Inst_2* inst) const
+{
+	U32 val;
+	if (inst->address_byte_size_override) {
+		// 8 bit value
+		val = ram.read<U8>(inst->address_value);
+	} else if (is_32_bit_ad_inst(inst->address_size_override)) {
+		// 32 bit value
+		val = ram.read<U32>(inst->address_value);
+	} else {
+		// 16 bit value
+		val = ram.read<U16>(inst->address_value);
+	}
+	return val;
+}
+
+void CPU::new_new_execute_instruction()
+{
+	const Inst_2* inst = static_cast<const Inst_2*>(nullptr); // todo
+	
+	ALU::branchMonitor.reset();
+	
+	U32 op1_val = 0;
+	if (inst->read_op1) {
+		switch(inst->op1_type)
+		{
+		case Inst_2::REG:
+			op1_val = inst_get_operand(inst, false);
+			break;
+		case Inst_2::MEM:
+			op1_val = inst_get_address(inst);
+			break;
+		case Inst_2::IMM:
+			op1_val = inst->immediate_value;
+			break;
+		case Inst_2::NONE:
+			break;
+		}
+	}
+	
+	U32 op2_val = 0;
+	if (inst->read_op2) {
+		switch(inst->op2_type)
+		{
+		case Inst_2::REG:
+			op2_val = inst_get_operand(inst, true);
+			break;
+		case Inst_2::MEM:
+			op2_val = inst_get_address(inst);
+			break;
+		case Inst_2::IMM:
+			op2_val = inst->immediate_value;
+			break;
+		case Inst_2::NONE:
+			break;
+		}
+	}
+	
+	/*
+	changer le flag_update en read_flags
+	ajouter un write_flags ?? (<- pour moment non)
+	implementer tout les op triviales dans l'ALU
+	les op non triviales auront leur propre decoder avec pre+post processing
+	
+	*/
+	
+	if (inst->opcode & 0x80) [[unlikely]] { 
+		// non-trivial op
+		execute_non_trivial_instruction(inst);
+	} else [[likely]] { 
+		execute_trivial_instruction(inst);
+	}
+}
+
+void CPU::execute_non_trivial_instruction(const Inst_2* inst)
+{
+	
+}
+
+void CPU::execute_trivial_instruction(const Inst_2* inst)
+{
+	
+}
+
+void CPU::new_execute_instruction()
+{
+	const Inst_2* inst = static_cast<const Inst_2*>(nullptr);
+	
+	ALU::branchMonitor.reset();
+	
+	U32 op1_val;
+	U32 op2_val;
+	U32 op3_val;
+	
+	bit op1_set = 0;
+	bit op2_set = 0;
+	bit op3_set = 0;
+	
+	bit write_to_reg = 0;
+	bit write_to_ram = 0;
+	U8 out_register;
+	U32 out_address;
+	
+	if (inst->is_op1_register) {
+		op1_val = inst_get_operand(inst);
+		op1_set = 1;
+		
+		if (inst->write_to_dest) {
+			write_to_reg = 1;
+			out_register = inst->op1_register;
+		}
+	}
+	
+	if (inst->is_next_op_address) {
+		switch ((op1_set << 1) | op2_set)
+		{
+		case 0b00:
+			op1_val = inst_get_address(inst);
+			op1_set = 1;
+			break;
+			
+		case 0b10:
+			op2_val = inst_get_address(inst);
+			op2_set = 1;
+			break;
+		}
+		
+		if (inst->write_to_dest) {
+			write_to_ram = 1;
+			out_address = inst->address_value;
+		}
+	}
+	
+	if (inst->is_next_op_register) {
+		switch ((op1_set << 1) | op2_set)
+		{
+		case 0b10:
+			op2_val = inst_get_operand(inst, true);
+			op2_set = 1;
+			break;
+			
+		case 0b11:
+			op3_val = inst_get_operand(inst, true);
+			op3_set = 1;
+			break;
+			
+		case 0b00:
+		default:
+			throw BadInstruction("Incorrect operand specification", registers.EIP);
+		}
+	}
+	
+	if (inst->is_next_op_immediate) {
+		switch ((op1_set << 2) | (op2_set << 1) | op3_set)
+		{
+			// no size constraints here because I am lazy
+		case 0b000:
+			op1_val = inst->immediate_value;
+			op1_set = 1;
+			break;
+			
+		case 0b100:
+			op2_val = inst->immediate_value;
+			op2_set = 1;
+			break;
+			
+		case 0b110:
+			op3_val = inst->immediate_value;
+			op3_set = 1;
+			break;
+		
+		case 0b111:	
+		default:
+			throw BadInstruction("Incorrect operand specification", registers.EIP);
+		}
+	}
+	
+	if (inst->register_out_override) {
+		write_to_reg = 1;
+		out_register = inst->register_out;
+	}
+	
+	U16 opcode = inst->opcode;
+	switch (opcode)
+	{
+		
+	}
+}
+
 void CPU::execute_instruction()
 {
 	const Inst* inst = instructions[registers.EIP];
@@ -58,7 +264,7 @@ void CPU::execute_instruction()
 		break;
 
 	case Inst::M: // Memory
-		op1_val = ram.read(inst->op1);
+		op1_val = ram.read<U8>(inst->op1);
 		break;
 
 	case Inst::None:
@@ -78,7 +284,7 @@ void CPU::execute_instruction()
 		break;
 
 	case Inst::M: // Memory
-		op2_val = ram.read(inst->op2);
+		op2_val = ram.read<U8>(inst->op2);
 		break;
 
 	case Inst::None:
@@ -284,7 +490,95 @@ void CPU::execute_instruction()
 	}
 	case ISA::Opcodes::CALL:
 	{
+		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.")
+		
+		U32 eip = registers.read_EIP();
+		push_4(eip);
+		eip = ALU::add_no_carry(eip, op1_val);
+		if (!is_32_bit_op_inst(inst->op1_size)) {
+			eip &= 0xFFFF; // keep only the first 2 bytes
+		}
+		registers.write_EIP(eip);
+		return; // skip EIP increment
+	}
+	case ISA::Opcodes::CBW:
+	{
+		if (is_32_bit_op_inst(inst->op1_size)) {
+			U8 al = registers.read(ISA::Registers::AL);
+			U16 ax = ALU::sign_extend((U16) al);
+			registers.write(ISA::Registers::AX, ax);
+		}
+		else {
+			U16 ax = registers.read(ISA::Registers::AX);
+			U32 eax = ALU::sign_extend((U32) ax);
+			registers.write(ISA::Registers::EAX, ax);
+		}
+		break;
+	}
+	case ISA::Opcodes::CLC:
+	{
+		registers.flag_write_CF(0);
+		break;
+	}
+	case ISA::Opcodes::CLD:
+	{
+		registers.flag_write_DF(0);
+		break;
+	}
+	case ISA::Opcodes::CLI:
+	{
+		registers.flag_write_IF(0);
+		break;
+	}
+	case ISA::Opcodes::CLTS:
+	{
+		registers.control_flag_write_TS(0);
+		break;
+	}
+	case ISA::Opcodes::CMC:
+	{
+		registers.flag_write_CF(!registers.flag_read_CF());
+		break;
+	}
+	case ISA::Opcodes::CMP:
+	{
+		WARNING("CMP can be incorrect because of ALU::sign_extend not taking into account the original operand size.");
+		U32 op2_ext;
+		if (is_32_bit_op_inst(inst->op2_size)) {
+			op2_ext = op2_val;
+		} 
+		else {
+			op2_ext = ALU::sign_extend(op2_val);
+		}
+		
+		bit carry;
+		U32 val = ALU::add(op1_val, op2_ext, carry);
+		
+		update_status_flags(op1_val, op2_val, val, (inst->op1_type == Inst::R ? inst->op1 : -1), carry);
+		break;
+	}
+	case ISA::Opcodes::CMPS:
+	{
 		NYI;
+	}
+	case ISA::Opcodes::CWD:
+	{
+		if (is_32_bit_op_inst(inst->op1_size)) {
+			if (ALU::check_is_negative(registers.read(ISA::Registers::EAX))) {
+				registers.write(ISA::Registers::EDX, 0xFFFFFFFF);
+			}
+			else {
+				registers.write(ISA::Registers::EDX, 0);
+			}
+		}
+		else {
+			if (ALU::check_is_negative(registers.read(ISA::Registers::AX))) {
+				registers.write(ISA::Registers::DX, 0xFFFF);
+			}
+			else {
+				registers.write(ISA::Registers::DX, 0);
+			}
+		}
 		break;
 	}
 	case ISA::Opcodes::MOV:
@@ -394,9 +688,56 @@ void CPU::execute_instruction()
 	}
 }
 
+bit CPU::is_32_bit_op_inst(bit op_prefix, bit D_flag_code_segment) const
+{
+	return op_prefix ^ D_flag_code_segment;
+}
+
+bit CPU::is_32_bit_ad_inst(bit ad_prefix, bit D_flag_code_segment) const
+{
+	return ad_prefix ^ D_flag_code_segment;
+}
+
 void CPU::push_2(U16 value)
 {
+	U32 esp = registers.read(ISA::Registers::ESP);
+	esp = ALU::add_no_carry(esp, (U32) -2);
+	registers.write(ISA::Registers::ESP, esp);
+	
+	stack.push(value);
+}
 
+void CPU::push_4(U32 value)
+{
+	U32 esp = registers.read(ISA::Registers::ESP);
+	esp = ALU::add_no_carry(esp, (U32) -4);
+	registers.write(ISA::Registers::ESP, esp);
+	
+	stack.push(value);
+}
+
+U16 CPU::pop_2()
+{
+	U16 val = stack.top();
+	stack.pop();
+	
+	U32 esp = registers.read(ISA::Registers::ESP);
+	esp = ALU::add_no_carry(esp, (U32) 2);
+	registers.write(ISA::Registers::ESP, esp);
+	
+	return val;
+}
+
+U32 CPU::pop_4()
+{
+	U32 val = stack.top();
+	stack.pop();
+	
+	U32 esp = registers.read(ISA::Registers::ESP);
+	esp = ALU::add_no_carry(esp, (U32) 4);
+	registers.write(ISA::Registers::ESP, esp);
+	
+	return val;
 }
 
 void CPU::update_overflow_flag(U32 op1, U32 op2, U32 result)

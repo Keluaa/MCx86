@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <memory>
+#include <exception>
 
 #include "data_types.h"
 
@@ -19,8 +20,21 @@ struct RAM
 		// TODO : descriptors tables, global and local, etc...  (p. 95)
 	}
 
-	U8 read(U32 address) const
+	template<typename A>
+	A read(U32 address) const
 	{
+		switch (sizeof(A))
+		{
+		case 1:
+			return bytes[address];
+		case 2:
+			return bytes[address + 1] << 8 + bytes[address];
+		case 4:
+			return bytes[address + 3] << 24 + bytes[address + 2] << 16 +
+				   bytes[address + 1] << 8 + bytes[address];
+		default:
+			throw std::logic_error("Wrong address size");
+		}
 		return bytes[address];
 	}
 	

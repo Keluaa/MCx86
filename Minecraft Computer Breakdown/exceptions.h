@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <exception>
 #include <memory>
@@ -38,7 +38,7 @@ class StopInstruction : public ExceptionWithMsg
 public:
 	StopInstruction(const int pos) noexcept
 	{
-		char buffer[50];
+		char* buffer = new char[50];
 		snprintf(buffer, 50, "Stop instruction reached at %d", pos);
 		this->msg = buffer;
 	}
@@ -50,8 +50,21 @@ class NotImplemented : public ExceptionWithMsg
 public:
 	NotImplemented(const U16 opcode, const int pos) noexcept
 	{
-		char buffer[50];
+		char* buffer = new char[50];
 		snprintf(buffer, 50, "Instruction %x at %d not implemented", (int)opcode, pos);
+		this->msg = buffer;
+	}
+};
+
+
+class ProcessorExeception : public ExceptionWithMsg
+{
+public:
+	ProcessorExeception(const char* mnemonic, const int pos, U8 code = 0)
+	{
+		const int buffer_size = strlen(mnemonic) + 30;
+		char* buffer = new char[buffer_size];
+		snprintf(buffer, buffer_size, "Exception %s(%d) at %d", mnemonic, code, pos);
 		this->msg = buffer;
 	}
 };
