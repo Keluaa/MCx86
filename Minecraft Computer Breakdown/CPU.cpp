@@ -46,7 +46,7 @@ U32 CPU::inst_get_operand(const Inst_2* inst, bool second) const
 	if (inst->operand_byte_size_override) {
 		// 8 bit value
 		val = registers.read_index<U8>(register_index);
-	} else if (is_32_bit_op_inst(inst->operand_byte_size_override)) {
+	} else if (is_32_bit_op_inst(inst->operand_size_override)) {
 		// 32 bit value
 		val = registers.read_index<U32>(register_index);
 	} else {
@@ -54,6 +54,38 @@ U32 CPU::inst_get_operand(const Inst_2* inst, bool second) const
 		val = registers.read_index<U16>(register_index);
 	}
 	return val;
+}
+
+void CPU::write_to_register(U8 register_index, U32 value, bit operand_size_override, bit operand_byte_size_override)
+{
+	if (operand_byte_size_override) {
+		// 8 bit value
+		registers.write_index<U8>(register_index, value);
+	}
+	else if (is_32_bit_op_inst(operand_size_override)) {
+		// 32 bit value
+		registers.write_index<U32>(register_index, value);
+	}
+	else {
+		// 16 bit value
+		registers.write_index<U16>(register_index, value);
+	}
+}
+
+void CPU::write_to_memory(U32 address, U32 value, bit address_size_override, bit address_byte_size_override)
+{
+	if (address_byte_size_override) {
+		// 8 bit value
+		ram.write<U8>(address, value);
+	}
+	else if (is_32_bit_ad_inst(address_size_override)) {
+		// 32 bit value
+		ram.write<U32>(address, value);
+	}
+	else {
+		// 16 bit value
+		ram.write<U16>(address, value);
+	}
 }
 
 U32 CPU::inst_get_address(const Inst_2* inst) const
@@ -78,10 +110,10 @@ void CPU::new_new_execute_instruction()
 	
 	ALU::branchMonitor.reset();
 	
+	// Read the operands
 	U32 op1_val = 0;
 	if (inst->read_op1) {
-		switch(inst->op1_type)
-		{
+		switch(inst->op1_type) {
 		case Inst_2::REG:
 			op1_val = inst_get_operand(inst, false);
 			break;
@@ -98,8 +130,7 @@ void CPU::new_new_execute_instruction()
 	
 	U32 op2_val = 0;
 	if (inst->read_op2) {
-		switch(inst->op2_type)
-		{
+		switch(inst->op2_type) {
 		case Inst_2::REG:
 			op2_val = inst_get_operand(inst, true);
 			break;
@@ -113,31 +144,56 @@ void CPU::new_new_execute_instruction()
 			break;
 		}
 	}
+
+	// get the flags registers if needed
+	U32 flags = 0;
+	if (inst->get_flags) {
+		flags = registers.EFLAGS;
+	}
 	
-	/*
-	changer le flag_update en read_flags
-	ajouter un write_flags ?? (<- pour moment non)
-	implementer tout les op triviales dans l'ALU
-	les op non triviales auront leur propre decoder avec pre+post processing
-	
-	*/
-	
+	// execute the instruction
+	U32 return_value = 0;
 	if (inst->opcode & 0x80) [[unlikely]] { 
 		// non-trivial op
-		execute_non_trivial_instruction(inst);
+		execute_non_arithmetic_instruction(inst);
 	} else [[likely]] { 
-		execute_trivial_instruction(inst);
+		return_value = execute_arithmetic_instruction(inst->opcode, inst->getSizeOverrides(), flags);
+	}
+	
+	if (inst->get_flags) {
+		// write the new flags
+		registers.EFLAGS = flags;
+	}
+
+	// write the output of the instruction to its destination
+	if (inst->write_to_dest) {
+		switch (inst->op1_type) {
+		case Inst_2::REG:
+			write_to_register(inst->op1_register, return_value, inst->operand_size_override, inst->operand_byte_size_override);
+			break;
+		case Inst_2::MEM:
+			write_to_memory(inst->address_value, return_value, inst->address_size_override, inst->address_byte_size_override);
+			break;
+		case Inst_2::IMM:
+		case Inst_2::NONE:
+			break;
+		}
+	}
+	else if (inst->register_out_override) {
+		registers.write(inst->register_out, return_value);
 	}
 }
 
-void CPU::execute_non_trivial_instruction(const Inst_2* inst)
+void CPU::execute_non_arithmetic_instruction(const Inst_2* inst)
 {
 	
 }
 
-void CPU::execute_trivial_instruction(const Inst_2* inst)
+U32 CPU::execute_arithmetic_instruction(const U8 opcode, const SizeOverrides sizeOverrides, U32& flags)
 {
-	
+	opcode & 0x7F; // consider only the first 7 bits
+
+	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
 }
 
 void CPU::new_execute_instruction()

@@ -6,6 +6,15 @@
 #include "instructions.hpp"
 
 
+struct SizeOverrides
+{
+	bit address_size_override:1;
+	bit operand_size_override:1;
+	bit address_byte_size_override:1;
+	bit operand_byte_size_override:1;
+};
+
+
 struct Inst_2
 {
 	/*
@@ -66,7 +75,7 @@ struct Inst_2
 	bit register_out_override:1;
 	U8 register_out:5;
 	
-	bit flags_update:1;
+	bit get_flags:1;
 	
 	// -- proposition:
 	enum OpType : U8 { NONE = 0b00, REG = 0b01, MEM = 0b10, IMM = 0b11 };
@@ -120,6 +129,16 @@ struct Inst_2
 		op2_register = (flags >> 0) & 0b111;
 	}
 #endif
+
+	SizeOverrides getSizeOverrides() const 
+	{
+		return SizeOverrides{
+			address_size_override,
+			operand_size_override,
+			address_byte_size_override,
+			operand_byte_size_override
+		};
+	}
 };
 
 #if 0

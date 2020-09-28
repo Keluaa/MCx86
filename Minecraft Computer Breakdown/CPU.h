@@ -27,12 +27,15 @@ class CPU
 	
 	U32 inst_get_operand(const Inst_2* inst, bool second = false) const;
 	U32 inst_get_address(const Inst_2* inst) const;
+
+	void write_to_register(U8 register_index, U32 value, bit operand_size_override, bit operand_byte_size_override);
+	void write_to_memory(U32 address, U32 value, bit address_size_override, bit address_byte_size_override);
 	
 	void new_new_execute_instruction();
 	void new_execute_instruction();
 	
-	void execute_non_trivial_instruction(const Inst_2* inst);
-	void execute_trivial_instruction(const Inst_2* inst);
+	void execute_non_arithmetic_instruction(const Inst_2* inst);
+	U32 execute_arithmetic_instruction(const U8 opcode, const SizeOverrides sizeOverrides, U32& flags);
 	
 	bit is_32_bit_op_inst(bit op_prefix, bit D_flag_code_segment = 0) const;
 	bit is_32_bit_ad_inst(bit ad_prefix, bit D_flag_code_segment = 0) const;

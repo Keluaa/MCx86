@@ -41,7 +41,7 @@ struct Registers
 	{
 		switch (sizeof(N))
 		{
-		case 1:
+		case sizeof(U8):
 			if (register_index < 4) {
 				// Low byte
 				return registers[register_index] & 0xFF;
@@ -49,9 +49,9 @@ struct Registers
 				// High byte
 				return (registers[register_index - 4] & 0xFF00) >> 8;
 			}
-		case 2:
+		case sizeof(U16):
 			return registers[register_index] & 0xFFFF;
-		case 4:
+		case sizeof(U32):
 			return registers[register_index];
 		default:
 			throw std::logic_error("Wrong register size");
@@ -79,6 +79,29 @@ struct Registers
 		}
 		else {
 			throw std::logic_error("Wrong register id");
+		}
+	}
+
+	template<typename N>
+	void write_index(U8 register_index, U32 value)
+	{
+		switch (sizeof(N))
+		{
+		case sizeof(U8):
+			if (register_index < 4) {
+				// Low byte
+				registers[register_index] |= value & 0xFF;
+			}
+			else {
+				// High byte
+				registers[register_index] |= (value & 0xFF) << 8;
+			}
+		case sizeof(U16):
+			registers[register_index] |= value & 0xFFFF;
+		case sizeof(U32):
+			registers[register_index] = value;
+		default:
+			throw std::logic_error("Wrong register size");
 		}
 	}
 
