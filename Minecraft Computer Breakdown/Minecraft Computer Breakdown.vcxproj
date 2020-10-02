@@ -159,17 +159,18 @@
     <ClInclude Include="data_types.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="IA-32_decoder.h" />
-    <ClInclude Include="instructions.hpp" />
-    <ClInclude Include="instructions_2.hpp" />
+    <ClInclude Include="IA-32_mapping.h" />
+    <ClInclude Include="instructions.h" />
     <ClInclude Include="memory_manager.hpp" />
     <ClInclude Include="RAM.hpp" />
-    <ClInclude Include="registers.h" />
+    <ClInclude Include="registers.hpp" />
     <ClInclude Include="ROM.h" />
     <ClInclude Include="stack.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPU.cpp" />
-    <ClCompile Include="instructions_2.cpp" />
+    <ClCompile Include="IA-32_mapping.cpp" />
+    <ClCompile Include="instructions.cpp" />
     <ClCompile Include="Minecraft Computer Breakdown.cpp" />
   </ItemGroup>
   <ItemGroup>

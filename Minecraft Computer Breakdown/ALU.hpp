@@ -6,6 +6,8 @@
 #include "circuit_branch_monitor.h"
 
 /*
+	TODO: fix description
+
 	Mimics the behaviour of all functionnalities of the ALU, using only the basic operations available.
 	Those basic operations include:
 	 - single bit shift (right or left) (all bits at once)
@@ -67,7 +69,7 @@ namespace ALU
 
 
 	template<typename N>
-	constexpr bit check_is_negative(N n, bool _internal_call = false)
+	constexpr bit check_is_negative(N n, U8 last_bit_pos = 0, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "check_is_negative operand must be of integral type");
 
@@ -83,11 +85,11 @@ namespace ALU
 		Returns 1 if there is an even number of bits in n, 0 otherwise.
 	*/
 	template<typename N>
-	constexpr bit check_parity(N n)
+	constexpr bit check_parity(N n, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "check_parity operand must be of integral type");
 
-		USE_BRANCH(branchMonitor);
+		if (!_internal_call) USE_BRANCH(branchMonitor);
 
 		bit res = 0;
 		typename std::make_unsigned<N>::type mask = 1;

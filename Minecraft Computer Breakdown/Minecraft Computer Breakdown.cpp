@@ -49,6 +49,7 @@ Intel SDE
 #define with_new(T, param, ...) new T{param, __VA_ARGS__} // standard definition
 #endif
 
+/*
 const Inst** load_fibbonacci(U32& instructions_count)
 {
 	instructions_count = 6;
@@ -62,6 +63,17 @@ const Inst** load_fibbonacci(U32& instructions_count)
 	instructions[i++] = with_new(Inst, ISA::Opcodes::XCHG, $.op1_type = Inst::R, $.op1 = ISA::Registers::EAX, $.op2_type = Inst::R, $.op2 = ISA::Registers::EDX);
 	instructions[i++] = with_new(Inst, ISA::Opcodes::JNO, $.displacement = -2);
 	instructions[i++] = with_new(Inst, ISA::Opcodes::STOP);
+
+	return (const Inst**) instructions;
+}
+*/
+const Inst** load_fibbonacci(U32& instructions_count)
+{
+	instructions_count = 0;
+	Inst** instructions = new Inst*[instructions_count];
+	std::memset(instructions, NULL, instructions_count);
+
+	// TODO
 
 	return (const Inst**) instructions;
 }

@@ -5,28 +5,66 @@
 
 #include "data_types.h"
 
+
+namespace Register
+{
+	// arbitrary values for each register
+
+	const U8 EAX = 0;
+	/*const U8 ECX = 1;
+	const U8 EDX = 2;
+	const U8 EBX = 3;*/
+	const U8 ESP = 4;
+	/*const U8 EBP = 5;
+	const U8 ESI = 6;
+	const U8 EDI = 7;*/
+
+	const U8 AX = 8;
+	/*const U8 CX = 9;
+	const U8 DX = 10;
+	const U8 BX = 11;
+	const U8 SP = 12;
+	const U8 BP = 13;
+	const U8 SI = 14;
+	const U8 DI = 15;*/
+
+	const U8 AH = 16;
+	/*const U8 CH = 17;
+	const U8 DH = 18;
+	const U8 BH = 19;*/
+
+	const U8 AL = 20;
+	/*const U8 CL = 21;
+	const U8 DL = 22;
+	const U8 BL = 23;*/
+
+	//const U8 EAX_EDX = 24; // used only for 64 bit assignements
+};
+
+
 namespace Flags // todo: constexpr + replace everywhere for clarity
 {
-	const U32 CF = 1 << 0;
-	const U32 PF = 1 << 2;
-	const U32 AF = 1 << 4;
-	const U32 ZF = 1 << 6;
-	const U32 SF = 1 << 7;
-	const U32 TF = 1 << 8;
-	const U32 IF = 1 << 9;
-	const U32 DF = 1 << 10;
-	const U32 OF = 1 << 11;
-	const U32 IOPL = 0b11 << 12;
-	const U32 IOPL_L = 1 << 12;
-	const U32 IOPL_H = 0b11 << 12;
-	const U32 NT = 1 << 14;
-	const U32 RF = 1 << 16;
-	const U32 VM = 1 << 17;
-	const U32 AC = 1 << 18;
-	const U32 VIF = 1 << 19;
-	const U32 VIP = 1 << 20;
-	const U32 ID = 1 << 21;
+	constexpr U32 CF = 1 << 0;
+	constexpr U32 PF = 1 << 2;
+	constexpr U32 AF = 1 << 4;
+	constexpr U32 ZF = 1 << 6;
+	constexpr U32 SF = 1 << 7;
+	constexpr U32 TF = 1 << 8;
+	constexpr U32 IF = 1 << 9;
+	constexpr U32 DF = 1 << 10;
+	constexpr U32 OF = 1 << 11;
+	constexpr U32 IOPL = 0b11 << 12;
+	constexpr U32 IOPL_L = 1 << 12;
+	constexpr U32 IOPL_H = 0b11 << 12;
+	constexpr U32 NT = 1 << 14;
+	constexpr U32 RF = 1 << 16;
+	constexpr U32 VM = 1 << 17;
+	constexpr U32 AC = 1 << 18;
+	constexpr U32 VIF = 1 << 19;
+	constexpr U32 VIP = 1 << 20;
+	constexpr U32 ID = 1 << 21;
 };
+
 
 struct Registers
 {
@@ -173,48 +211,7 @@ struct Registers
 	*/
 
 	U32 EFLAGS = 0b10; // bit 1 is always 1
-
-	U32 read_EFLAGS() const { return EFLAGS; }
-	U16 read_FLAGS() const { return EFLAGS & 0xFFFF; }
-	
-	bit flag_read_CF() const { return bool(EFLAGS & (1 << 0)); }      // Carry Flag
-	bit flag_read_PF() const { return bool(EFLAGS & (1 << 2)); }      // Parity Flag
-	bit flag_read_AF() const { return bool(EFLAGS & (1 << 4)); }      // Adjust Flag
-	bit flag_read_ZF() const { return bool(EFLAGS & (1 << 6)); }      // Zero Flag
-	bit flag_read_SF() const { return bool(EFLAGS & (1 << 7)); }      // Sign Flag
-	bit flag_read_TF() const { return bool(EFLAGS & (1 << 8)); }      // Trap Flag
-	bit flag_read_IF() const { return bool(EFLAGS & (1 << 9)); }      // Interruption Flag
-	bit flag_read_DF() const { return bool(EFLAGS & (1 << 10)); }     // Direction Flag
-	bit flag_read_OF() const { return bool(EFLAGS & (1 << 11)); }     // Overflow Flag
-	bit flag_read_IOPL_L() const { return bool(EFLAGS & (1 << 12)); } // first IOPL bit
-	bit flag_read_IOPL_H() const { return bool(EFLAGS & (1 << 13)); } // second IOPL bit
-	bit flag_read_NT() const { return bool(EFLAGS & (1 << 14)); }     // Nested Task Flag
-	bit flag_read_RF() const { return bool(EFLAGS & (1 << 16)); }     // Resume Flag
-	bit flag_read_VM() const { return bool(EFLAGS & (1 << 17)); }     // Virtual 8086 Mode Flag
-	bit flag_read_AC() const { return bool(EFLAGS & (1 << 18)); }     // Alignment Check Flag
-	bit flag_read_VIF() const { return bool(EFLAGS & (1 << 19)); }    // Virtual Interruption Flag
-	bit flag_read_VIP() const { return bool(EFLAGS & (1 << 20)); }    // Virtual Interrupt Pending Flag
-	bit flag_read_ID() const { return bool(EFLAGS & (1 << 21)); }     // Identification Flag
-
-    void flag_write_CF(bit value) { EFLAGS |= value * (1 << 0); }     // Carry Flag
-	void flag_write_PF(bit value) { EFLAGS |= value * (1 << 2); }	  // Parity Flag
-	void flag_write_AF(bit value) { EFLAGS |= value * (1 << 4); }	  // Adjust Flag
-	void flag_write_ZF(bit value) { EFLAGS |= value * (1 << 6); }	  // Zero Flag
-	void flag_write_SF(bit value) { EFLAGS |= value * (1 << 7); }	  // Sign Flag
-	void flag_write_TF(bit value) { EFLAGS |= value * (1 << 8); }	  // Trap Flag
-	void flag_write_IF(bit value) { EFLAGS |= value * (1 << 9); }	  // Interruption Flag
-	void flag_write_DF(bit value) { EFLAGS |= value * (1 << 10); }	  // Direction Flag
-	void flag_write_OF(bit value) { EFLAGS |= value * (1 << 11); }	  // Overflow Flag
-	void flag_write_IOPL_L(bit value) { EFLAGS |= value * (1 << 12); }// first IOPL bit
-	void flag_write_IOPL_H(bit value) { EFLAGS |= value * (1 << 13); }// second IOPL bit
-	void flag_write_NT(bit value) { EFLAGS |= value * (1 << 14); }	  // Nested Task Flag
-	void flag_write_RF(bit value) { EFLAGS |= value * (1 << 16); }    // Resume Flag
-	void flag_write_VM(bit value) { EFLAGS |= value * (1 << 17); }    // Virtual 8086 Mode Flag
-	void flag_write_AC(bit value) { EFLAGS |= value * (1 << 18); }    // Alignment Check Flag
-	void flag_write_VIF(bit value) { EFLAGS |= value * (1 << 19); }   // Virtual Interruption Flag
-	void flag_write_VIP(bit value) { EFLAGS |= value * (1 << 20); }   // Virtual Interrupt Pending Flag
-	void flag_write_ID(bit value) { EFLAGS |= value * (1 << 21); }    // Identification Flag
-
+		
 	/*
 		Control Registers
 	*/

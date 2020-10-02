@@ -26,13 +26,24 @@ struct RAM
 		std::memset(bytes_3, 0, N / 4);
 		std::memset(bytes_4, 0, N / 4);
 	}
-	
-	constexpr U8* get_bytes_array(U32 address) const { 
+
+	constexpr U8* get_bytes_array(U32 address) {
 		switch (address % 4) {
 		case 0: return bytes_1 + (address >> 2);
 		case 1: return bytes_2 + (address >> 2);
 		case 2: return bytes_3 + (address >> 2);
 		case 3: return bytes_4 + (address >> 2);
+		default: return nullptr;
+		}
+	}
+	
+	constexpr const U8* get_bytes_array_const(U32 address) const { 
+		switch (address % 4) {
+		case 0: return bytes_1 + (address >> 2);
+		case 1: return bytes_2 + (address >> 2);
+		case 2: return bytes_3 + (address >> 2);
+		case 3: return bytes_4 + (address >> 2);
+		default: return nullptr;
 		}
 	}
 
@@ -47,15 +58,15 @@ struct RAM
 		switch (sizeof(A))
 		{
 		case sizeof(U8):
-			return *get_bytes_array(address);
+			return *get_bytes_array_const(address);
 		case sizeof(U16):
-			return (*get_bytes_array(address + 1) << 8) |
-				   (*get_bytes_array(address + 0) << 0);
+			return (*get_bytes_array_const(address + 1) << 8) |
+				   (*get_bytes_array_const(address + 0) << 0);
 		case sizeof(U32):
-			return (*get_bytes_array(address + 3) << 24) |
-				   (*get_bytes_array(address + 2) << 16) |
-				   (*get_bytes_array(address + 1) << 8) |
-				   (*get_bytes_array(address + 0) << 0);
+			return (*get_bytes_array_const(address + 3) << 24) |
+				   (*get_bytes_array_const(address + 2) << 16) |
+				   (*get_bytes_array_const(address + 1) << 8) |
+				   (*get_bytes_array_const(address + 0) << 0);
 		default:
 			throw std::logic_error("Wrong address size");
 		}

@@ -4,12 +4,10 @@
 
 #include "data_types.h"
 #include "ALU.hpp"
-#include "instructions.hpp"
-#include "instructions_2.hpp"
+#include "instructions.h"
 #include "registers.hpp"
 #include "RAM.hpp"
 #include "ROM.h"
-//#include "memory_manager.hpp"
 #include "exceptions.h"
 
 
@@ -25,7 +23,7 @@ class CPU
 	const Inst** instructions;
 	const U32 instructions_count;
 	
-	const Inst_2* currentInstruction;
+	const Inst* currentInstruction;
 	
 	U32 inst_get_operand(U8 register_index, bit operand_size_override, bit operand_byte_size_override) const;
 	U32 inst_get_address(U32 address_value, bit address_size_override, bit address_byte_size_override) const;
@@ -35,10 +33,7 @@ class CPU
 	void write_to_register(U8 register_index, U32 value, bit operand_size_override, bit operand_byte_size_override);
 	void write_to_memory(U32 address, U32 value, bit address_size_override, bit address_byte_size_override);
 	
-	void new_new_execute_instruction();
-	void new_execute_instruction();
-	
-	void execute_non_arithmetic_instruction(const Inst_2* inst);
+	void execute_non_arithmetic_instruction(const Inst* inst);
 	void execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	
 	bit is_32_bit_op_inst(bit op_prefix, bit D_flag_code_segment = 0) const;
