@@ -140,6 +140,33 @@ namespace ALU
 	}
 	
 	
+	template<typename A, typename B>
+	constexpr bit compare_greater(A a, B b, bool _internal_call = false)
+	{
+		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "compare_greater operands must be of integral type");
+		static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_greater' must have at least the same bit length than the second");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+		typename std::make_unsigned<A>::type mask = 1 << (sizeof(A) * 8 - 1);
+
+		for (int i = 0; i < sizeof(A) * 8; i++) {
+			if (((a & mask) ^ (b & mask)) == 0) { // a_i == b_i
+				mask >>= 1;
+				continue;
+			}
+			else if (a & mask) { // a_i > b_i
+				return true;
+			}
+			else { // a_i < b_i
+				return false;
+			}
+		}
+
+		return false; // a == b
+	}
+	
+	
 	/*
 		Sign extend a signed number which has been converted to 
 		an unsigned type which is double its size.
@@ -308,11 +335,12 @@ namespace ALU
 
 
 	template<typename N>
-	constexpr bit get_bit_at(N& n, U8 pos, bool _internal_call = false)
+	constexpr bit get_bit_at(const N n, U8 pos, bool _internal_call = false)
 	{
 		// 'get_bit_at' and 'get_and_set_bit_at' share the same circuit, 
 		// because they are very similar, and not much used.
-		return get_and_set_bit_at(n, pos, 0, _internal_call, true);
+		N n_ = n;
+		return get_and_set_bit_at(n_, pos, 0, _internal_call, true);
 	}
 	
 	
@@ -386,6 +414,23 @@ namespace ALU
 	}
 
 
+	template<typename A, typename B>
+	constexpr A sub(A a, B b, bit& carry, bool _internal_call = false)
+	{
+		b = ALU::negate(b, true);
+		return ALU::add(a, b, carry, _internal_call);
+	}
+	
+	
+	template<typename A, typename B>
+	constexpr A sub_no_carry(A a, B b, bool _internal_call = false)
+	{
+		bit carry = 0;
+		b = ALU::negate(b, true);
+		return ALU::add(a, b, carry, _internal_call);
+	}
+	
+	
 	template<typename N>
 	constexpr N abs(N n, bool _internal_call = false)
 	{

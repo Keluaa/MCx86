@@ -25,9 +25,13 @@ class CPU
 	const Inst** instructions;
 	const U32 instructions_count;
 	
-	U32 inst_get_operand(const Inst_2* inst, bool second = false) const;
-	U32 inst_get_address(const Inst_2* inst) const;
+	const Inst_2* currentInstruction;
+	
+	U32 inst_get_operand(U8 register_index, bit operand_size_override, bit operand_byte_size_override) const;
+	U32 inst_get_address(U32 address_value, bit address_size_override, bit address_byte_size_override) const;
 
+	OpSize get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment = 0) const;
+	
 	void write_to_register(U8 register_index, U32 value, bit operand_size_override, bit operand_byte_size_override);
 	void write_to_memory(U32 address, U32 value, bit address_size_override, bit address_byte_size_override);
 	
@@ -35,7 +39,7 @@ class CPU
 	void new_execute_instruction();
 	
 	void execute_non_arithmetic_instruction(const Inst_2* inst);
-	U32 execute_arithmetic_instruction(const U8 opcode, const SizeOverrides sizeOverrides, U32& flags);
+	void execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	
 	bit is_32_bit_op_inst(bit op_prefix, bit D_flag_code_segment = 0) const;
 	bit is_32_bit_ad_inst(bit ad_prefix, bit D_flag_code_segment = 0) const;
@@ -46,14 +50,14 @@ class CPU
 	U16 pop_2();
 	U32 pop_4();
 
-	void update_overflow_flag(U32 op1, U32 op2, U32 result);
-	void update_sign_flag(U32 result);
-	void update_zero_flag(U32 result);
-	void update_adjust_flag(U32 op1, U32 op2, U8 register_);
-	void update_parity_flag(U32 result);
-	void update_carry_flag(bit carry);
+	void update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize);
+	void update_sign_flag(U32& flags, U32 result, OpSize size);
+	void update_zero_flag(U32& flags, U32 result);
+	void update_adjust_flag(U32& flags, U32 op1, U32 op2);
+	void update_parity_flag(U32& flags, U32 result);
+	void update_carry_flag(U32& flags, bit carry);
 
-	void update_status_flags(U32 op1, U32 op2, U32 result, U8 register_, bit carry = 0);
+	void update_status_flags(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry = 0);
 
 public:
 	CPU(const Inst** instructions, const U32 count);

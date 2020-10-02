@@ -5,6 +5,28 @@
 
 #include "data_types.h"
 
+namespace Flags // todo: constexpr + replace everywhere for clarity
+{
+	const U32 CF = 1 << 0;
+	const U32 PF = 1 << 2;
+	const U32 AF = 1 << 4;
+	const U32 ZF = 1 << 6;
+	const U32 SF = 1 << 7;
+	const U32 TF = 1 << 8;
+	const U32 IF = 1 << 9;
+	const U32 DF = 1 << 10;
+	const U32 OF = 1 << 11;
+	const U32 IOPL = 0b11 << 12;
+	const U32 IOPL_L = 1 << 12;
+	const U32 IOPL_H = 0b11 << 12;
+	const U32 NT = 1 << 14;
+	const U32 RF = 1 << 16;
+	const U32 VM = 1 << 17;
+	const U32 AC = 1 << 18;
+	const U32 VIF = 1 << 19;
+	const U32 VIP = 1 << 20;
+	const U32 ID = 1 << 21;
+};
 
 struct Registers
 {

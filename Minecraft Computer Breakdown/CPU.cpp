@@ -5,6 +5,8 @@
 
 #define NYI throw NotImplemented(opcode, registers.EIP)
 
+#define INTERRUPT(mnemonic, code) throw ProcessorExeception(mnemonic, registers.EIP, code)
+
 CPU::CPU(const Inst** instructions, const U32 count)
 	: instructions(instructions), instructions_count(count) 
 {
@@ -13,6 +15,7 @@ CPU::CPU(const Inst** instructions, const U32 count)
 
 void CPU::switch_protected_mode(bit protected_)
 {
+	// todo: see the startup process in the manual instead
 	registers.control_flag_write_PE(protected_);
 }
 
@@ -39,19 +42,34 @@ void CPU::run()
 	std::cout << "Program finished in " << cycle << " cycles.\n";
 }
 
-U32 CPU::inst_get_operand(const Inst_2* inst, bool second) const
+U32 CPU::inst_get_operand(U8 register_index, bit operand_size_override, bit operand_byte_size_override) const
 {
-	U8 register_index = second ? inst->op2_register : inst->op1_register;
 	U32 val;
-	if (inst->operand_byte_size_override) {
+	if (operand_byte_size_override) {
 		// 8 bit value
 		val = registers.read_index<U8>(register_index);
-	} else if (is_32_bit_op_inst(inst->operand_size_override)) {
+	} else if (is_32_bit_op_inst(operand_size_override)) {
 		// 32 bit value
 		val = registers.read_index<U32>(register_index);
 	} else {
 		// 16 bit value
 		val = registers.read_index<U16>(register_index);
+	}
+	return val;
+}
+
+U32 CPU::inst_get_address(U32 address_value, bit address_size_override, bit address_byte_size_override) const
+{
+	U32 val;
+	if (address_byte_size_override) {
+		// 8 bit value
+		val = ram.read<U8>(address_value);
+	} else if (is_32_bit_ad_inst(address_size_override)) {
+		// 32 bit value
+		val = ram.read<U32>(address_value);
+	} else {
+		// 16 bit value
+		val = ram.read<U16>(address_value);
 	}
 	return val;
 }
@@ -88,57 +106,78 @@ void CPU::write_to_memory(U32 address, U32 value, bit address_size_override, bit
 	}
 }
 
-U32 CPU::inst_get_address(const Inst_2* inst) const
+OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment) const
 {
-	U32 val;
-	if (inst->address_byte_size_override) {
-		// 8 bit value
-		val = ram.read<U8>(inst->address_value);
-	} else if (is_32_bit_ad_inst(inst->address_size_override)) {
-		// 32 bit value
-		val = ram.read<U32>(inst->address_value);
-	} else {
-		// 16 bit value
-		val = ram.read<U16>(inst->address_value);
+	if (byte_size_override) {
+		return OpSize::B;
 	}
-	return val;
+	else if (size_override ^ D_flag_code_segment) {
+		return OpSize::DW;
+	}
+	else {
+		return OpSize::W;
+	}
 }
 
 void CPU::new_new_execute_instruction()
 {
 	const Inst_2* inst = static_cast<const Inst_2*>(nullptr); // todo
+	currentInstruction = inst;
 	
 	ALU::branchMonitor.reset();
+	
+	InstData data = inst->getInstData();
 	
 	// Read the operands
 	U32 op1_val = 0;
 	if (inst->read_op1) {
 		switch(inst->op1_type) {
 		case Inst_2::REG:
-			op1_val = inst_get_operand(inst, false);
+			data.op1 = inst_get_operand(inst->op1_register, inst->operand_size_override, inst->operand_byte_size_override);
+			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
 			break;
 		case Inst_2::MEM:
-			op1_val = inst_get_address(inst);
+			data.op1 = inst_get_address(inst->address_value, inst->address_size_override, inst->address_byte_size_override);
+			data.op1_size = get_size(inst->address_size_override, inst->address_byte_size_override);
 			break;
 		case Inst_2::IMM:
-			op1_val = inst->immediate_value;
+			data.op1 = inst->immediate_value;
+			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);	
+			break;
+		case Inst_2::M_M:
+			// used only by BOUND for the second operand
 			break;
 		case Inst_2::NONE:
 			break;
 		}
 	}
 	
-	U32 op2_val = 0;
 	if (inst->read_op2) {
 		switch(inst->op2_type) {
 		case Inst_2::REG:
-			op2_val = inst_get_operand(inst, true);
+			data.op2 = inst_get_operand(inst->op2_register, inst->operand_size_override, inst->operand_byte_size_override);
+			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);	
 			break;
 		case Inst_2::MEM:
-			op2_val = inst_get_address(inst);
+			data.op2 = inst_get_address(inst->address_value, inst->address_size_override, inst->address_byte_size_override);
+			data.op2_size = get_size(inst->address_size_override, inst->address_byte_size_override);	
 			break;
 		case Inst_2::IMM:
-			op2_val = inst->immediate_value;
+			data.op2 = inst->immediate_value;
+			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);	
+			break;
+		case Inst_2::M_M:
+			// used only by BOUND
+			// the fact that we are addressing memory more than once could be problematic
+			data.op2 = inst_get_address(inst->address_value, inst->address_size_override, 0);
+			data.op2_size = get_size(inst->address_size_override, 0);	
+			if (is_32_bit_ad_inst(inst->address_size_override)) {
+				data.op3 = inst_get_address(inst->address_value + 4, inst->address_size_override, 0);
+			}
+			else {
+				data.op3 = inst_get_address(inst->address_value + 2, inst->address_size_override, 0);
+			}
+			data.op3_size = data.op2_size;
 			break;
 		case Inst_2::NONE:
 			break;
@@ -153,11 +192,12 @@ void CPU::new_new_execute_instruction()
 	
 	// execute the instruction
 	U32 return_value = 0;
-	if (inst->opcode & 0x80) [[unlikely]] { 
+	U32 return_value_2 = 0;
+	if (inst->opcode & 0x80) { 
 		// non-trivial op
 		execute_non_arithmetic_instruction(inst);
-	} else [[likely]] { 
-		return_value = execute_arithmetic_instruction(inst->opcode, inst->getSizeOverrides(), flags);
+	} else { 
+		execute_arithmetic_instruction(inst->opcode, data, flags, return_value, return_value_2);
 	}
 	
 	if (inst->get_flags) {
@@ -174,8 +214,7 @@ void CPU::new_new_execute_instruction()
 		case Inst_2::MEM:
 			write_to_memory(inst->address_value, return_value, inst->address_size_override, inst->address_byte_size_override);
 			break;
-		case Inst_2::IMM:
-		case Inst_2::NONE:
+		default:
 			break;
 		}
 	}
@@ -189,13 +228,378 @@ void CPU::execute_non_arithmetic_instruction(const Inst_2* inst)
 	
 }
 
-U32 CPU::execute_arithmetic_instruction(const U8 opcode, const SizeOverrides sizeOverrides, U32& flags)
+void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
 {
-	opcode & 0x7F; // consider only the first 7 bits
+	switch (opcode & 0x7F) // consider only the first 7 bits of the opcode
+	{
+	case Opcodes_2::AAA:
+	{
+		// if AF is set or if the first 4 bits of AL are greater than 9 
+		if ((flags & Flags::AF) || ALU::compare_greater_or_equal(U8(data.op1) & 0x0F, 10)) {
+			// we do
+			// AL <- (AL + 6) and 0x0F
+			// AH <- AH + 1
+			// but in one step:
+			// AX <- (AH + 1) : (AL + 6) & 0x0F
+			// or:
+			// AX <- (AX + 0x0106) & 0x0F0F <- 0F0F mask because we are doing BCD operations
+			ret = ALU::add_no_carry(data.op1, (U16) 0x0106) & 0x0F0F;
+			
+			flags |= Flags::AF | Flags::CF;
+		}
+		else {
+			ret = data.op1; // keep AX intact
+			
+			flags &= ~(Flags::AF | Flags::CF);
+		}
+		break;
+	}
+	case Opcodes_2::AAD:
+	{
+		U8 AH_val = (data.op1 & 0xFF00) >> 8;
+		U8 AL_val = data.op1 & 0xFF;
 
+		AL_val = ALU::add_no_carry(ALU::multiply(AH_val, (U8)10), AL_val);
+
+		update_sign_flag(flags, AL_val, OpSize::B);
+		update_zero_flag(flags, AL_val);
+		update_parity_flag(flags, AL_val);
+		
+		ret = AL_val;
+		break;
+	}
+	case Opcodes_2::AAM:
+	{
+		U8 q, r;
+		bit divByZero;
+		ALU::unsigned_divide(U8(data.op1 & 0xFF), (U8)10, q, r, divByZero);
+		
+		registers.write(ISA::Registers::AH, q);
+		registers.write(ISA::Registers::AL, r);
+
+		update_sign_flag(flags, r, OpSize::B);
+		update_zero_flag(flags, r);
+		update_parity_flag(flags, r);
+		
+		ret = (q << 8) | r;
+		break;
+	}
+	case Opcodes_2::AAS:
+	{
+		// if AF is set or if the first 4 bits of AL are greater than 9 
+		if ((flags & Flags::AF) || ALU::compare_greater_or_equal(data.op1 & 0x0F, 10)) {
+			// we do:
+			// AL <- (AL - 6) & 0x0F
+			// AH <- AH - 1
+			// but in one step:
+			// AX <- (AX + ((-1 << 8) + (-6 & 0x0F))) & 0xFF0F
+			// notice: -6 & 0x0F = 0x0A
+			// and then: (-1 << 8) + (-6 & 0x0F) = 0xFF0A
+			ret = ALU::add_no_carry(U16(data.op1), (U16)0xFF0A) & 0xFF0F;
+			
+			flags |= Flags::AF | Flags::CF;
+		}
+		else {
+			flags &= ~(Flags::AF | Flags::CF);
+		}
+		break;
+	}
+	case Opcodes_2::ADC:
+	{
+		bit carry = flags & Flags::CF;
+		ret = ALU::add(data.op1, data.op2, carry);
+
+		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+		break;
+	}
+	case Opcodes_2::ADD:
+	{
+		bit carry = 0;
+		ret = ALU::add(data.op1, data.op2, carry);
+		
+		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+		break;
+	}
+	case Opcodes_2::AND:
+	{
+		ret = ALU::and_(data.op1, data.op2);
+		
+		flags &= ~(Flags::CF | Flags::OF);
+		update_parity_flag(flags, ret);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		break;
+	}
+	case Opcodes_2::ARPL:
+	{
+		// compare the first two bits of the operands, and branch if op1 < op2
+		if (!ALU::compare_greater_or_equal(data.op1 & 0x03, data.op2 & 0x03)) {
+			// copy the first two bits of op2 to the first two bits of op1
+			ret = (data.op1 & (0xFF - 0x03)) | (data.op2 & 0x03);
+
+			flags |= Flags::ZF;
+		}
+		else {
+			flags &= Flags::ZF;
+		}
+		break;
+	}
+	case Opcodes_2::BOUND:
+	{
+		if (!ALU::compare_greater_or_equal(data.op1, data.op2) || ALU::compare_greater(data.op1, data.op3)) {
+			INTERRUPT("#BR", 5);
+		}
+		break;
+	}
+	case Opcodes_2::BSF:
+	{
+		bit isZero;
+		ret = ALU::get_first_set_bit_index(data.op1, isZero);
+
+		if (isZero) {
+			flags |= Flags::ZF;
+		}
+		else {
+			flags &= ~Flags::ZF;
+		}
+		break;
+	}
+	case Opcodes_2::BSR:
+	{
+		bit isZero;
+		ret = ALU::get_last_set_bit_index(data.op1, isZero);
+
+		if (isZero) {
+			flags |= Flags::ZF;
+		}
+		else {
+			flags &= ~Flags::ZF;
+		}
+		break;
+	}
+	case Opcodes_2::BT:
+	{
+		if (data.op2 > 32) {
+			// see the manual! (p. 268)
+			WARNING("The BT instruction has an incomplete implementation for memomry operands.")
+		}
+		
+		bit bit_val = ALU::get_bit_at(data.op1, data.op2 & 0b11111); // op2 mod 32
+		if (bit_val) {
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		break;
+	}
+	case Opcodes_2::BTC:
+	{
+		if (data.op2 > 32) {
+			WARNING("The BTC instruction has an incomplete implementation for memomry operands.")
+		}
+
+		bit bit_val = ALU::get_bit_at(data.op1, data.op2, true);
+		ret = data.op1;
+		ALU::get_and_set_bit_at(ret, data.op2, !bit_val);
+		if (bit_val) {
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		break;
+	}
+	case Opcodes_2::BTR:
+	{
+		if (data.op2 > 32) {
+			WARNING("The BTR instruction has an incomplete implementation for memomry operands.")
+		}
+
+		ret = data.op1;
+		bit bit_val = ALU::get_and_set_bit_at(ret, data.op2, 0);
+		if (bit_val) {
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		break;
+	}
+	case Opcodes_2::BTS:
+	{
+		if (data.op2 > 32) {
+			WARNING("The BTS instruction has an incomplete implementation for memomry operands.")
+		}
+
+		ret = data.op1;
+		bit bit_val = ALU::get_and_set_bit_at(ret, data.op2, 1);
+		if (bit_val) {
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		break;
+	}
+	case Opcodes_2::CBW:
+	{
+		if (data.op1_size == OpSize::W) {
+			U8 al = data.op1;
+			ret = ALU::sign_extend((U16) al);
+		}
+		else {
+			U16 ax = data.op1;
+			ret = ALU::sign_extend((U32) ax);
+		}
+		break;
+	}
+	case Opcodes_2::CLC:
+	{
+		flags &= ~Flags::CF;
+		break;
+	}
+	case Opcodes_2::CLD:
+	{
+		flags &= ~Flags::DF;
+		break;
+	}
+	case Opcodes_2::CLI:
+	{
+		WARNING("Permission check missing, this instruction should sometimes raise an exception"); // TODO
+		flags &= ~Flags::IF;
+		break;
+	}
+	case Opcodes_2::CLTS:
+	{
+		// this instruction needs special treatment
+		WARNING("Permission check missing, this instruction should sometimes raise an exception"); // TODO
+		registers.control_flag_write_TS(0);
+		break;
+	}
+	case Opcodes_2::CMC:
+	{
+		flags ^= Flags::CF;
+		break;
+	}
+	case Opcodes_2::CMP:
+	{
+		bit carry;
+		U32 val = ALU::sub(data.op1, data.op2, carry);
+		
+		update_status_flags(flags, data.op1, data.op2, val, data.op1_size, data.op2_size, data.op1_size, carry);
+		break;
+	}
+	case Opcodes_2::CWD:
+	{
+		if (data.op2_size == OpSize::DW) {
+			if (ALU::check_is_negative(data.op2)) {
+				ret = 0xFFFFFFFF;
+			}
+			else {
+				ret = 0;
+			}
+		}
+		else {
+			if (ALU::check_is_negative(data.op2)) {
+				ret = 0xFFFF;
+			}
+			else {
+				ret = 0;
+			}
+		}
+		break;
+	}
+	case Opcodes_2::DAA:
+	{
+		bit carry = 0;
+		if ((flags & Flags::AF) || ALU::compare_greater_or_equal(U8(data.op1) & 0x0F, 10)) {
+			ret = ALU::add(U8(data.op1), U8(6), carry); // AL += 6
+			flags |= Flags::AF;
+		}
+		else {
+			flags &= ~Flags::AF;
+		}
+		
+		carry |= flags & Flags::CF;
+		if (carry || ALU::compare_greater_or_equal(U8(data.op1), U8(0x10))) {
+			ret = ALU::add_no_carry(U8(ret), U8(0x60)); // AL += 0x60
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		
+		update_parity_flag(flags, ret);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		break;
+	}
+	case Opcodes_2::DAS:
+	{
+		bit carry = 0;
+		if ((flags & Flags::AF) || ALU::compare_greater_or_equal(U8(data.op1 & 0x0F), U8(10))) {
+			ret = ALU::sub(U8(data.op1), U8(6), carry); // AL -= 6
+			flags |= Flags::AF;
+		}
+		else {
+			flags &= ~Flags::AF;
+		}
+		
+		carry |= flags & Flags::CF;
+		if (carry || ALU::compare_greater_or_equal(U8(data.op1), U8(0x10))) {
+			ret = ALU::sub_no_carry(U8(ret), U8(0x60)); // AL -= 0x60
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		
+		update_parity_flag(flags, ret);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		break; 
+	}
+	case Opcodes_2::DEC:
+	{
+		ret = ALU::sub_no_carry(data.op1, U8(1));
+		
+		update_overflow_flag(flags, data.op1, U8(-1), ret, data.op1_size, OpSize::B, data.op1_size);
+		update_parity_flag(flags, ret);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		update_adjust_flag(flags, data.op1, -1); 
+		break;
+	}
+	// ------------ perfect implementation (I hope) up to here -------------
+	case Opcodes_2::DIV:
+	{
+		U32 r, q, n = data.op1, d = data.op2;
+		bit divByZero = false;
+		ALU::unsigned_divide(n, d, q, r, divByZero);
+		
+		if (divByZero) {
+			INTERRUPT("#DE", 0);
+		}
+		
+		
+		
+		
+		break;
+	}
+	/*
+	case Opcodes_2::DAA:
+	{
+		break;
+	}
+	*/
+	}
+	
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
+	
+	return ret;
 }
-
+/*
 void CPU::new_execute_instruction()
 {
 	const Inst_2* inst = static_cast<const Inst_2*>(nullptr);
@@ -300,6 +704,7 @@ void CPU::new_execute_instruction()
 		
 	}
 }
+*/
 
 void CPU::execute_instruction()
 {
@@ -354,6 +759,7 @@ void CPU::execute_instruction()
 	U16 opcode = inst->two_bytes_opcode ? (0x0F00 + inst->opcode) : inst->opcode;
 	switch (opcode)
 	{
+	/*
 	case ISA::Opcodes::AAA:
 	{
 		U16 AX_val = registers.read(ISA::Registers::AX);
@@ -544,6 +950,7 @@ void CPU::execute_instruction()
 		registers.flag_write_CF(bit_val);
 		break;
 	}
+	*/
 	case ISA::Opcodes::CALL:
 	{
 		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.")
@@ -557,6 +964,7 @@ void CPU::execute_instruction()
 		registers.write_EIP(eip);
 		return; // skip EIP increment
 	}
+	/*
 	case ISA::Opcodes::CBW:
 	{
 		if (is_32_bit_op_inst(inst->op1_size)) {
@@ -613,10 +1021,12 @@ void CPU::execute_instruction()
 		update_status_flags(op1_val, op2_val, val, (inst->op1_type == Inst::R ? inst->op1 : -1), carry);
 		break;
 	}
+	*/
 	case ISA::Opcodes::CMPS:
 	{
 		NYI;
 	}
+	/*
 	case ISA::Opcodes::CWD:
 	{
 		if (is_32_bit_op_inst(inst->op1_size)) {
@@ -637,6 +1047,7 @@ void CPU::execute_instruction()
 		}
 		break;
 	}
+	*/
 	case ISA::Opcodes::MOV:
 	{
 		op1_val_out = op2_val;
@@ -796,10 +1207,10 @@ U32 CPU::pop_4()
 	return val;
 }
 
-void CPU::update_overflow_flag(U32 op1, U32 op2, U32 result)
+void CPU::update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize)
 {
 	/*
-	overflow flag:
+	overflow flag truth table (1: op1, 2: op2, R: result):
 	1 2 R OF
 	+ + + 0
 	+ + - 1
@@ -810,62 +1221,144 @@ void CPU::update_overflow_flag(U32 op1, U32 op2, U32 result)
 
 	=> (s(op1) & s(op2)) ^ s(R)
 	*/
-	registers.flag_write_OF((ALU::check_is_negative(op1) & ALU::check_is_negative(op2)) ^ ALU::check_is_negative(result));
+	bit is_op1_neg, is_op2_neg, is_ret_neg;
+	
+	switch (op1Size) {
+	case OpSize::DW:
+		is_op1_neg = ALU::check_is_negative(op1, true);
+		break;
+		
+	case OpSize::W:
+		is_op1_neg = ALU::check_is_negative(U16(op1), true);
+		break;
+		
+	case OpSize::B:
+		is_op1_neg = ALU::check_is_negative(U8(op1), true);
+		break;
+	}
+	
+	switch (op2Size) {
+	case OpSize::DW:
+		is_op2_neg = ALU::check_is_negative(op2, true);
+		break;
+		
+	case OpSize::W:
+		is_op2_neg = ALU::check_is_negative(U16(op2), true);
+		break;
+		
+	case OpSize::B:
+		is_op2_neg = ALU::check_is_negative(U8(op2), true);
+		break;
+	}
+	
+	switch (retSize) {
+	case OpSize::DW:
+		is_ret_neg = ALU::check_is_negative(ret, true);
+		break;
+		
+	case OpSize::W:
+		is_ret_neg = ALU::check_is_negative(U16(ret), true);
+		break;
+		
+	case OpSize::B:
+		is_ret_neg = ALU::check_is_negative(U8(ret), true);
+		break;
+	}
+	
+	bit OF = (is_op1_neg & is_op2_neg) ^ is_ret_neg;
+	if (OF) {
+		flags |= Flags::OF;
+	}
+	else {
+		flags &= ~Flags::OF;
+	}
 }
 
-void CPU::update_sign_flag(U32 result)
+void CPU::update_sign_flag(U32& flags, U32 result, OpSize size)
 {
-	registers.flag_write_SF(ALU::check_is_negative(result));
+	bit is_neg = false;
+	switch (size) {
+	case OpSize::DW:
+		is_neg = ALU::check_is_negative(result, true);
+		break;
+	case OpSize::W:
+		is_neg = ALU::check_is_negative(U16(result), true);
+		break;
+	case OpSize::B:
+		is_neg = ALU::check_is_negative(U8(result), true);
+		break;
+	}
+	if (is_neg) {
+		flags |= Flags::SF;
+	}
+	else {
+		flags &= ~Flags::SF;
+	}
 }
 
-void CPU::update_zero_flag(U32 result)
+void CPU::update_zero_flag(U32& flags, U32 result)
 {
-	registers.flag_write_ZF(ALU::check_equal_zero(result));
+	if (ALU::check_equal_zero(result, true)) {
+		flags |= Flags::ZF;
+	}
+	else {
+		flags &= ~Flags::FZ;
+	}
 }
 
-void CPU::update_adjust_flag(U32 op1, U32 op2, U8 register_)
+void CPU::update_adjust_flag(U32& flags, U32 op1, U32 op2)
 {
 	/*
 	Adjust flag is set only if there were an carry from the first 4 bits of the AL register to the 4 other bits.
 	It is 0 otherwise, including when the operation didn't used the AL register.
 	This function should only be called with instructions modifing the AL register (or AX and EAX, but not AH).
 	*/
-	switch (register_)
-	{
-	case ISA::Registers::AL:
-	case ISA::Registers::AX:
-	case ISA::Registers::EAX:
-		// Not the implementation used in the circuit, which is much simpler as this flag comes out from the adder
-		// directly.
-		registers.flag_write_AF((op1 & 0x0F) + (op2 & 0x0F) > 0x0F);
-		break;
-
-	default:
-		registers.flag_write_AF(0);
-		break;
+	if (currentInstruction->op1_type == Inst_2::REG && currentInstrcuction->op1_register == 0) {
+		// Not the implementation used in the circuit, which is much simpler, 
+		// as this flag comes out from the adder directly.
+		bit AF = (op1 & 0x0F) + (op2 & 0x0F) > 0x0F;
+		if (AF) {
+			flags |= Flags::AF;
+		}
+		else {
+			flags &= ~Flags::AF;
+		}
+	}
+	else {
+		flags &= ~Flags::AF;
 	}
 }
 
-void CPU::update_parity_flag(U32 result)
+void CPU::update_parity_flag(U32& flags, U32 result)
 {
 	/*
 	Parity check is made only on the first byte
 	*/
-	registers.flag_write_PF(ALU::check_parity(U8(result)));
+	if (ALU::check_parity(U8(result & 0xFF), true)) {
+		flags |= Flags::PF;
+	}
+	else {
+		flags &= ~Flags::PF;
+	}
 }
 
-void CPU::update_carry_flag(bit carry)
+void CPU::update_carry_flag(U32& flags, bit carry)
 {
-	registers.flag_write_CF(carry);
+	if (carry) {
+		flags |= Flags::PF;
+	}
+	else {
+		flags &= ~Flags::PF;
+	}
 }
 
-void CPU::update_status_flags(U32 op1, U32 op2, U32 result, U8 register_, bit carry)
+void CPU::update_status_flags(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry)
 {
 	// updates all status flags
-	update_overflow_flag(op1, op2, result);
-	update_sign_flag(result);
-	update_zero_flag(result);
-	update_adjust_flag(op1, op2, register_);
-	update_parity_flag(result);
-	update_carry_flag(carry);
+	update_overflow_flag(flags, op1, op2, result, op1Size, pp2Size, retSize);
+	update_sign_flag(flags, result, retSize);
+	update_zero_flag(flags, result);
+	update_adjust_flag(flags, op1, op2);
+	update_parity_flag(flags, result);
+	update_carry_flag(flags, carry);
 }

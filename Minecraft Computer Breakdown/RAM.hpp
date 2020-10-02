@@ -67,17 +67,17 @@ struct RAM
 		switch (sizeof(A))
 		{
 		case sizeof(U8):
-			getBytesAddress(address) = value & 0xFF;
+			*get_bytes_array(address) = value & 0xFF;
 			break;
 		case sizeof(U16):
-			getBytesAddress(address + 1) = (value & 0xFF00) >> 8;
-			getBytesAddress(address + 0) = (value & 0x00FF) >> 0;
+			*get_bytes_array(address + 1) = (value & 0xFF00) >> 8;
+			*get_bytes_array(address + 0) = (value & 0x00FF) >> 0;
 			break;
 		case sizeof(U32):
-			getBytesAddress(address + 3) = (value & 0xFF000000) >> 24;
-			getBytesAddress(address + 2) = (value & 0x00FF0000) >> 16;
-			getBytesAddress(address + 1) = (value & 0x0000FF00) >> 8;
-			getBytesAddress(address + 0) = (value & 0x000000FF) >> 0;
+			*get_bytes_array(address + 3) = (value & 0xFF000000) >> 24;
+			*get_bytes_array(address + 2) = (value & 0x00FF0000) >> 16;
+			*get_bytes_array(address + 1) = (value & 0x0000FF00) >> 8;
+			*get_bytes_array(address + 0) = (value & 0x000000FF) >> 0;
 			break;
 		default:
 			throw std::logic_error("Wrong address size");

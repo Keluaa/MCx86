@@ -1,6 +1,7 @@
 ﻿
 #include "instructions_2.hpp"
 
+/*
 #define arithmethic 0
 #define not_arithmethic (1 << 8)
 #define jmp (1 << 7)
@@ -10,22 +11,22 @@ static int op_count = 0;
 
 namespace Opcodes_2
 {
-	const U8 AAA	 = (op_count++) | arithmethic;
-	const U8 AAD     = (op_count++) | arithmethic;
+	constexpr U8 AAA	 = (op_count++) | arithmethic;
+	constexpr U8 AAD     = (op_count++) | arithmethic;
 	const U8 AAM     = (op_count++) | arithmethic;
 	const U8 AAS     = (op_count++) | arithmethic;
 	const U8 ADC     = (op_count++) | arithmethic;
 	const U8 ADD     = (op_count++) | arithmethic;
 	const U8 AND     = (op_count++) | arithmethic;
 	const U8 ARPL    = (op_count++) | arithmethic;
-	const U8 BOUND   = (op_count++) | not_arithmethic;
+	
 	const U8 BSF     = (op_count++) | arithmethic;
 	const U8 BSR     = (op_count++) | arithmethic;
 	const U8 BT      = (op_count++) | arithmethic;
 	const U8 BTC     = (op_count++) | arithmethic;
 	const U8 BTR     = (op_count++) | arithmethic;
 	const U8 BTS     = (op_count++) | arithmethic;
-	const U8 CALL    = (op_count++) | not_arithmethic | jmp;
+	
 	const U8 CBW     = (op_count++) | arithmethic;
 	const U8 CLC     = (op_count++) | arithmethic;
 	const U8 CLD     = (op_count++) | arithmethic;
@@ -33,18 +34,64 @@ namespace Opcodes_2
 	const U8 CLTS    = (op_count++) | arithmethic;
 	const U8 CMC     = (op_count++) | arithmethic;
 	const U8 CMP     = (op_count++) | arithmethic;
-	const U8 CMPS    = (op_count++) | not_arithmethic | str;
+	
 	const U8 CWD     = (op_count++) | arithmethic;
 	const U8 DAA     = (op_count++) | arithmethic;
 	const U8 DAS     = (op_count++) | arithmethic;
 	const U8 DEC     = (op_count++) | arithmethic;
 	const U8 DIV     = (op_count++) | arithmethic;
-	const U8 ENTER   = (op_count++) | not_arithmethic;
-	const U8 HLT     = (op_count++) | not_arithmethic;
+	
 	const U8 IDIV    = (op_count++) | arithmethic;
 	const U8 IMUL    = (op_count++) | arithmethic;
-	const U8 IN      = (op_count++) | not_arithmethic;
+	
 	const U8 INC     = (op_count++) | arithmethic;
+	
+	const U8 LEA     = (op_count++) | arithmethic;
+	
+	const U8 MOV     = (op_count++) | arithmethic;
+	
+	const U8 MOVSX   = (op_count++) | arithmethic;
+	const U8 MOVZX   = (op_count++) | arithmethic;
+	const U8 MUL     = (op_count++) | arithmethic;
+	const U8 NEG     = (op_count++) | arithmethic;
+	const U8 NOP     = (op_count++) | arithmethic;
+	const U8 NOT     = (op_count++) | arithmethic;
+	const U8 OR      = (op_count++) | arithmethic;
+	
+	const U8 RCL     = (op_count++) | arithmethic;
+	
+	const U8 SAL     = (op_count++) | arithmethic;
+	const U8 SBB     = (op_count++) | arithmethic;
+	
+	const U8 SETcc   = (op_count++) | arithmethic;
+	
+	const U8 SHRD    = (op_count++) | arithmethic;
+	const U8 SLDT    = (op_count++) | arithmethic;
+	
+	const U8 STC     = (op_count++) | arithmethic;
+	const U8 STD     = (op_count++) | arithmethic;
+	const U8 STI     = (op_count++) | arithmethic;
+	
+	const U8 SUB     = (op_count++) | arithmethic;
+	const U8 TEST    = (op_count++) | arithmethic;
+	
+	const U8 XCHG    = (op_count++) | arithmethic;
+	const U8 XLAT    = (op_count++) | arithmethic;
+	const U8 XOR     = (op_count++) | arithmethic;
+	
+	// Non arithmetic only instructions
+	
+	const U8 BOUND   = (op_count = 0, (op_count++) | not_arithmethic); // hacky way to reset 'op_count'
+	
+	const U8 CALL    = (op_count++) | not_arithmethic | jmp;
+	
+	const U8 CMPS    = (op_count++) | not_arithmethic | str;
+	
+	const U8 ENTER   = (op_count++) | not_arithmethic;
+	const U8 HLT     = (op_count++) | not_arithmethic;
+	
+	const U8 IN      = (op_count++) | not_arithmethic;
+	
 	const U8 INS     = (op_count++) | not_arithmethic | str;
 	const U8 INT     = (op_count++) | not_arithmethic | jmp;
 	const U8 IRET    = (op_count++) | not_arithmethic | jmp;
@@ -52,7 +99,7 @@ namespace Opcodes_2
 	const U8 JMP     = (op_count++) | not_arithmethic | jmp;
 	const U8 LAHF    = (op_count++) | not_arithmethic;
 	const U8 LAR     = (op_count++) | not_arithmethic;
-	const U8 LEA     = (op_count++) | arithmethic;
+	
 	const U8 LEAVE   = (op_count++) | not_arithmethic | jmp;
 	const U8 LGDT    = (op_count++) | not_arithmethic;
 	const U8 LGS     = (op_count++) | not_arithmethic;
@@ -63,15 +110,9 @@ namespace Opcodes_2
 	const U8 LOOP    = (op_count++) | not_arithmethic | jmp;
 	const U8 LSL     = (op_count++) | not_arithmethic;
 	const U8 LTR     = (op_count++) | not_arithmethic;
-	const U8 MOV     = (op_count++) | arithmethic;
+	
 	const U8 MOVS    = (op_count++) | not_arithmethic | str;
-	const U8 MOVSX   = (op_count++) | arithmethic;
-	const U8 MOVZX   = (op_count++) | arithmethic;
-	const U8 MUL     = (op_count++) | arithmethic;
-	const U8 NEG     = (op_count++) | arithmethic;
-	const U8 NOP     = (op_count++) | arithmethic;
-	const U8 NOT     = (op_count++) | arithmethic;
-	const U8 OR      = (op_count++) | arithmethic;
+	
 	const U8 OUT     = (op_count++) | not_arithmethic;
 	const U8 OUTS    = (op_count++) | not_arithmethic | str;
 	const U8 POP     = (op_count++) | not_arithmethic;
@@ -80,35 +121,24 @@ namespace Opcodes_2
 	const U8 PUSH    = (op_count++) | not_arithmethic;
 	const U8 PUSHA   = (op_count++) | not_arithmethic;
 	const U8 PUSHF   = (op_count++) | not_arithmethic;
-	const U8 RCL     = (op_count++) | arithmethic;
+	
 	const U8 REP     = (op_count++) | not_arithmethic | jmp | str;
 	const U8 RET     = (op_count++) | not_arithmethic | jmp;
 	const U8 SAHF    = (op_count++) | not_arithmethic;
-	const U8 SAL     = (op_count++) | arithmethic;
-	const U8 SBB     = (op_count++) | arithmethic;
+	
 	const U8 SCAS    = (op_count++) | not_arithmethic | str;
-	const U8 SETcc   = (op_count++) | arithmethic;
+	
 	const U8 SGDT    = (op_count++) | not_arithmethic;
-	const U8 SHRD    = (op_count++) | arithmethic;
-	const U8 SLDT    = (op_count++) | arithmethic;
+	
 	const U8 SMSW    = (op_count++) | not_arithmethic;
-	const U8 STC     = (op_count++) | arithmethic;
-	const U8 STD     = (op_count++) | arithmethic;
-	const U8 STI     = (op_count++) | arithmethic;
+	
 	const U8 STOS    = (op_count++) | not_arithmethic | str;
 	const U8 STR     = (op_count++) | not_arithmethic;
-	const U8 SUB     = (op_count++) | arithmethic;
-	const U8 TEST    = (op_count++) | arithmethic;
+	
 	const U8 VERR    = (op_count++) | not_arithmethic;
 	const U8 WAIT    = (op_count++) | not_arithmethic;
-	const U8 XCHG    = (op_count++) | arithmethic;
-	const U8 XLAT    = (op_count++) | arithmethic;
-	const U8 XOR     = (op_count++) | arithmethic;
 };
-
-
-
-
+*/
 
 
 Inst_2::Inst_2(U16 opcode,  U32 flags, U32 address_value, U32 immediate_value)
@@ -225,7 +255,7 @@ const std::map<U16, Inst_2> ISA::InstTable {
 			{ 0x83 OPEXT(4), Inst_2(ISA::Opcodes::AND, write_dest | get_flags | op1r(read) | op2t(imm, read)) },
 			
 /* ARPL */	{ 0x63, Inst_2(ISA::Opcodes::ARPL, write_dest | get_flags | op1r(read) | op2t(reg, read) | size16) },
-/* BOUND */	{ 0x62, Inst_2(ISA::Opcodes::BOUND, write_dest | op1t(reg, read) | op2r(read) | size16) }, // ??
+/* BOUND */	{ 0x62, Inst_2(ISA::Opcodes::BOUND, op1t(reg, read) | op2t(mem, read)) }, // problem: we must read at the memory pointer of the second operand, but also at the next one
 
 /* BSF */ { 0x0FBC, Inst_2(ISA::Opcodes::BSF, write_dest | get_flags | op1t(reg, read) | op2r(read)) },
 /* BSR */ { 0x0FBD, Inst_2(ISA::Opcodes::BSR, write_dest | get_flags | op1t(reg, read) | op2r(read)) },
@@ -263,15 +293,15 @@ const std::map<U16, Inst_2> ISA::InstTable {
 			{ 0x3A, Inst_2(ISA::Opcodes::CMP, get_flags | op1t(reg, read) | op2r(read) | size8) },
 			{ 0x3B, Inst_2(ISA::Opcodes::CMP, get_flags | op1t(reg, read) | op2r(read)) },
 			{ 0x3C, Inst_2(ISA::Opcodes::CMP, get_flags | op1t(reg, read) | op2t(imm, read) | reg1(reg_A) | size8) },
-			{ 0x3C, Inst_2(ISA::Opcodes::CMP, get_flags | op1t(reg, read) | op2t(imm, read) | reg1(reg_A)) },
+			{ 0x3D, Inst_2(ISA::Opcodes::CMP, get_flags | op1t(reg, read) | op2t(imm, read) | reg1(reg_A)) },
 			{ 0x80 OPEXT(7), Inst_2(ISA::Opcodes::CMP, get_flags | op1r(read) | op2t(imm, read) | size8) },
 			{ 0x81 OPEXT(7), Inst_2(ISA::Opcodes::CMP, get_flags | op1r(read) | op2t(imm, read)) },
-			{ 0x83 OPEXT(7), Inst_2(ISA::Opcodes::CMP, get_flags | op1r(read) | op2t(imm, read)) },
+			{ 0x83 OPEXT(7), Inst_2(ISA::Opcodes::CMP, get_flags | op1r(read) | op2t(imm, read)) },  // special treatment for this instruction: the immediate should the sign extended
 			
 /* CMPS */	{ 0xA6, Inst_2(ISA::Opcodes::CMPS, get_flags) },
 			{ 0xA7, Inst_2(ISA::Opcodes::CMPS, get_flags) },
 			
-/* CWD */	{ 0x99, Inst_2(ISA::Opcodes::CWD, op1t(reg, read) | reg1(reg_A)) },
+/* CWD */	{ 0x99, Inst_2(ISA::Opcodes::CWD, op1t(reg, no_read) | op2t(reg, read) | reg1(reg_D) | reg2(reg_A)) },
 /* DAA */	{ 0x27, Inst_2(ISA::Opcodes::DAA, get_flags | op1t(reg, read) | reg1(reg_A) | size8) },
 /* DAS */	{ 0x2F, Inst_2(ISA::Opcodes::DAS, get_flags | op1t(reg, read) | reg1(reg_A) | size8) },
 

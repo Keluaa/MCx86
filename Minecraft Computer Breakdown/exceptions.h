@@ -60,7 +60,7 @@ public:
 class ProcessorExeception : public ExceptionWithMsg
 {
 public:
-	ProcessorExeception(const char* mnemonic, const int pos, U8 code = 0)
+	ProcessorExeception(const char* mnemonic, const int pos, U8 code = -1)
 	{
 		const int buffer_size = strlen(mnemonic) + 30;
 		char* buffer = new char[buffer_size];
