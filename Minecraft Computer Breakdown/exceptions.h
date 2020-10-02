@@ -20,6 +20,19 @@ public:
 };
 
 
+class RegisterException : public ExceptionWithMsg
+{
+public:
+	RegisterException(const char* msg, const int index = 0) noexcept
+	{
+		const int buffer_size = strlen(msg) + 20;
+		char* buffer = new char[buffer_size];
+		snprintf(buffer, buffer_size, "'%s' for register index %d", msg, index);
+		this->msg = buffer;
+	}
+};
+
+
 class BadInstruction : public ExceptionWithMsg
 {
 public:

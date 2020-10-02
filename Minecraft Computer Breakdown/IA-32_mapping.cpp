@@ -1,6 +1,6 @@
 
 #include "IA-32_mapping.h"
-#include "registers.hpp"
+#include "registers.h"
 
 #define size16 (0b11 << 22) // sets the operand and address sizes to two bytes
 #define size8 (0b11 << 20) // sets the operand and address sizes to one byte

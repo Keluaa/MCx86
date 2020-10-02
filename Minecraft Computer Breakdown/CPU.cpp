@@ -43,70 +43,6 @@ void CPU::run()
 	std::cout << "Program finished in " << cycle << " cycles.\n";
 }
 
-U32 CPU::inst_get_operand(U8 register_index, bit operand_size_override, bit operand_byte_size_override) const
-{
-	U32 val;
-	if (operand_byte_size_override) {
-		// 8 bit value
-		val = registers.read_index<U8>(register_index);
-	} else if (is_32_bit_op_inst(operand_size_override)) {
-		// 32 bit value
-		val = registers.read_index<U32>(register_index);
-	} else {
-		// 16 bit value
-		val = registers.read_index<U16>(register_index);
-	}
-	return val;
-}
-
-U32 CPU::inst_get_address(U32 address_value, bit address_size_override, bit address_byte_size_override) const
-{
-	U32 val;
-	if (address_byte_size_override) {
-		// 8 bit value
-		val = ram.read<U8>(address_value);
-	} else if (is_32_bit_ad_inst(address_size_override)) {
-		// 32 bit value
-		val = ram.read<U32>(address_value);
-	} else {
-		// 16 bit value
-		val = ram.read<U16>(address_value);
-	}
-	return val;
-}
-
-void CPU::write_to_register(U8 register_index, U32 value, bit operand_size_override, bit operand_byte_size_override)
-{
-	if (operand_byte_size_override) {
-		// 8 bit value
-		registers.write_index<U8>(register_index, value);
-	}
-	else if (is_32_bit_op_inst(operand_size_override)) {
-		// 32 bit value
-		registers.write_index<U32>(register_index, value);
-	}
-	else {
-		// 16 bit value
-		registers.write_index<U16>(register_index, value);
-	}
-}
-
-void CPU::write_to_memory(U32 address, U32 value, bit address_size_override, bit address_byte_size_override)
-{
-	if (address_byte_size_override) {
-		// 8 bit value
-		ram.write<U8>(address, value);
-	}
-	else if (is_32_bit_ad_inst(address_size_override)) {
-		// 32 bit value
-		ram.write<U32>(address, value);
-	}
-	else {
-		// 16 bit value
-		ram.write<U16>(address, value);
-	}
-}
-
 OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment) const
 {
 	if (byte_size_override) {
@@ -134,16 +70,16 @@ void CPU::execute_instruction()
 	if (inst->read_op1) {
 		switch(inst->op1_type) {
 		case OpType::REG:
-			data.op1 = inst_get_operand(inst->op1_register, inst->operand_size_override, inst->operand_byte_size_override);
 			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op1 = registers.read_index(inst->op1_register, data.op1_size);
 			break;
 		case OpType::MEM:
-			data.op1 = inst_get_address(inst->address_value, inst->address_size_override, inst->address_byte_size_override);
 			data.op1_size = get_size(inst->address_size_override, inst->address_byte_size_override);
+			data.op1 = ram.read(inst->address_value, data.op1_size);
 			break;
 		case OpType::IMM:
+			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
 			data.op1 = inst->immediate_value;
-			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);	
 			break;
 		case OpType::M_M:
 			// used only by BOUND for the second operand
@@ -156,27 +92,27 @@ void CPU::execute_instruction()
 	if (inst->read_op2) {
 		switch(inst->op2_type) {
 		case OpType::REG:
-			data.op2 = inst_get_operand(inst->op2_register, inst->operand_size_override, inst->operand_byte_size_override);
-			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);	
+			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op2 = registers.read_index(inst->op2_register, data.op2_size);
 			break;
 		case OpType::MEM:
-			data.op2 = inst_get_address(inst->address_value, inst->address_size_override, inst->address_byte_size_override);
-			data.op2_size = get_size(inst->address_size_override, inst->address_byte_size_override);	
+			data.op2_size = get_size(inst->address_size_override, inst->address_byte_size_override);
+			data.op2 = ram.read(inst->address_value, data.op2_size);
 			break;
 		case OpType::IMM:
+			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
 			data.op2 = inst->immediate_value;
-			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);	
 			break;
 		case OpType::M_M:
 			// used only by BOUND
 			// the fact that we are addressing memory more than once could be problematic
-			data.op2 = inst_get_address(inst->address_value, inst->address_size_override, 0);
-			data.op2_size = get_size(inst->address_size_override, 0);	
-			if (is_32_bit_ad_inst(inst->address_size_override)) {
-				data.op3 = inst_get_address(inst->address_value + 4, inst->address_size_override, 0);
+			data.op2_size = get_size(inst->address_size_override, 0);
+			data.op2 = ram.read(inst->address_value, data.op2_size);
+			if (data.op2_size == OpSize::DW) {
+				data.op3 = ram.read(inst->address_value + 4, data.op2_size);
 			}
 			else {
-				data.op3 = inst_get_address(inst->address_value + 2, inst->address_size_override, 0);
+				data.op3 = ram.read(inst->address_value + 2, data.op2_size);
 			}
 			data.op3_size = data.op2_size;
 			break;
@@ -210,10 +146,10 @@ void CPU::execute_instruction()
 	if (inst->write_to_dest) {
 		switch (inst->op1_type) {
 		case OpType::REG:
-			write_to_register(inst->op1_register, return_value, inst->operand_size_override, inst->operand_byte_size_override);
+			registers.write_index(inst->op1_register, return_value, data.op1_size);
 			break;
 		case OpType::MEM:
-			write_to_memory(inst->address_value, return_value, inst->address_size_override, inst->address_byte_size_override);
+			ram.write(inst->address_value, return_value, data.op1_size);
 			break;
 		default:
 			break;
@@ -270,7 +206,9 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		bit divByZero;
 		ALU::unsigned_divide(U8(data.op1 & 0xFF), (U8)10, q, r, divByZero);
 		
-		registers.write(Register::AH, q);
+		NYI; // TODO: those register calls should NOT be there!
+
+		registers.write(Register::AH, q); 
 		registers.write(Register::AL, r);
 
 		update_sign_flag(flags, r, OpSize::B);
@@ -489,7 +427,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	case Opcodes::CWD:
 	{
 		if (data.op2_size == OpSize::DW) {
-			if (ALU::check_is_negative(data.op2)) {
+			if (ALU::check_is_negative(data.op2, OpSize::DW)) {
 				ret = 0xFFFFFFFF;
 			}
 			else {
@@ -497,7 +435,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 			}
 		}
 		else {
-			if (ALU::check_is_negative(data.op2)) {
+			if (ALU::check_is_negative(data.op2, OpSize::W)) {
 				ret = 0xFFFF;
 			}
 			else {
@@ -696,18 +634,10 @@ void CPU::execute_non_arithmetic_instruction(const Inst* inst)
 	*/
 }
 
-bit CPU::is_32_bit_op_inst(bit op_prefix, bit D_flag_code_segment) const
-{
-	return op_prefix ^ D_flag_code_segment;
-}
-
-bit CPU::is_32_bit_ad_inst(bit ad_prefix, bit D_flag_code_segment) const
-{
-	return ad_prefix ^ D_flag_code_segment;
-}
-
 void CPU::push_2(U16 value)
 {
+	// TODO : maybe replace ESP incrementations in stack ops with one increment output from the instruction processor
+	//  then we would have a dedicated adder next to the ESP register to perform one read, one add, one write.
 	U32 esp = registers.read(Register::ESP);
 	esp = ALU::add_no_carry(esp, (U32) -2);
 	registers.write(Register::ESP, esp);
@@ -762,50 +692,9 @@ void CPU::update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize 
 
 	=> (s(op1) & s(op2)) ^ s(R)
 	*/
-	bit is_op1_neg, is_op2_neg, is_ret_neg;
-	
-	switch (op1Size) {
-	case OpSize::DW:
-		is_op1_neg = ALU::check_is_negative(op1, true);
-		break;
-		
-	case OpSize::W:
-		is_op1_neg = ALU::check_is_negative(U16(op1), true);
-		break;
-		
-	case OpSize::B:
-		is_op1_neg = ALU::check_is_negative(U8(op1), true);
-		break;
-	}
-	
-	switch (op2Size) {
-	case OpSize::DW:
-		is_op2_neg = ALU::check_is_negative(op2, true);
-		break;
-		
-	case OpSize::W:
-		is_op2_neg = ALU::check_is_negative(U16(op2), true);
-		break;
-		
-	case OpSize::B:
-		is_op2_neg = ALU::check_is_negative(U8(op2), true);
-		break;
-	}
-	
-	switch (retSize) {
-	case OpSize::DW:
-		is_ret_neg = ALU::check_is_negative(result, true);
-		break;
-		
-	case OpSize::W:
-		is_ret_neg = ALU::check_is_negative(U16(result), true);
-		break;
-		
-	case OpSize::B:
-		is_ret_neg = ALU::check_is_negative(U8(result), true);
-		break;
-	}
-	
+	bit is_op1_neg = ALU::check_is_negative(op1, op1Size, true);
+	bit is_op2_neg = ALU::check_is_negative(op2, op2Size, true);
+	bit is_ret_neg = ALU::check_is_negative(result, retSize, true);
 	bit OF = (is_op1_neg & is_op2_neg) ^ is_ret_neg;
 	if (OF) {
 		flags |= Flags::OF;
@@ -817,20 +706,7 @@ void CPU::update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize 
 
 void CPU::update_sign_flag(U32& flags, U32 result, OpSize size)
 {
-	bit is_neg = false;
-	switch (size) {
-	case OpSize::DW:
-		is_neg = ALU::check_is_negative(result, true);
-		break;
-	case OpSize::W:
-		is_neg = ALU::check_is_negative(U16(result), true);
-		break;
-	case OpSize::B:
-		is_neg = ALU::check_is_negative(U8(result), true);
-		break;
-	}
-
-	if (is_neg) {
+	if (ALU::check_is_negative(result, size, true)) {
 		flags |= Flags::SF;
 	}
 	else {

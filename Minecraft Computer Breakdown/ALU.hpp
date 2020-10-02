@@ -4,6 +4,7 @@
 
 #include "data_types.h"
 #include "circuit_branch_monitor.h"
+#include "instructions.h"
 
 /*
 	TODO: fix description
@@ -69,14 +70,23 @@ namespace ALU
 
 
 	template<typename N>
-	constexpr bit check_is_negative(N n, U8 last_bit_pos = 0, bool _internal_call = false)
+	constexpr bit check_is_negative(N n, OpSize size = OpSize::UNKNOWN, bool _internal_call = false)
 	{
 		static_assert(std::is_integral<N>{}, "check_is_negative operand must be of integral type");
 
 		if (!_internal_call) USE_BRANCH(branchMonitor);
 
+		U8 last_bit_pos = 0;
+		switch (size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U32) * 8 - 1; break;
+		default: last_bit_pos = sizeof(N) * 8 - 1;   break;
+		}
+
 		// check if the last bit is set
-		typename std::make_unsigned<N>::type mask = 1 << (sizeof(N) * 8 - 1);
+		typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
 		return bool(n & mask);
 	}
 
@@ -441,7 +451,7 @@ namespace ALU
 		if (!_internal_call) USE_BRANCH(branchMonitor);
 
 		N res;
-		if (check_is_negative(n, true)) {
+		if (check_is_negative(n, OpSize::UNKNOWN, true)) {
 			res = negate(n, true);
 		}
 		else {
@@ -596,7 +606,7 @@ namespace ALU
 		q = q_unsigned;
 		r = r_unsigned;
 
-		bit sign = (check_is_negative(n, true)) ^ (check_is_negative(d, true));
+		bit sign = (check_is_negative(n, OpSize::UNKNOWN, true)) ^ (check_is_negative(d, OpSize::UNKNOWN, true));
 		if (sign) {
 			// the result is negative
 			q = negate(q, true);

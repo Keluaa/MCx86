@@ -4,6 +4,8 @@
 #include <exception>
 
 #include "data_types.h"
+#include "instructions.h"
+
 
 template<U32 N>
 struct RAM
@@ -52,17 +54,16 @@ struct RAM
 		// TODO : descriptors tables, global and local, etc...  (p. 95)
 	}
 
-	template<typename A>
-	A read(U32 address) const
+	U32 read(U32 address, OpSize size) const
 	{
-		switch (sizeof(A))
+		switch (size)
 		{
-		case sizeof(U8):
+		case OpSize::B:
 			return *get_bytes_array_const(address);
-		case sizeof(U16):
+		case OpSize::W:
 			return (*get_bytes_array_const(address + 1) << 8) |
 				   (*get_bytes_array_const(address + 0) << 0);
-		case sizeof(U32):
+		case OpSize::DW:
 			return (*get_bytes_array_const(address + 3) << 24) |
 				   (*get_bytes_array_const(address + 2) << 16) |
 				   (*get_bytes_array_const(address + 1) << 8) |
@@ -72,19 +73,18 @@ struct RAM
 		}
 	}
 	
-	template<typename A>
-	void write(U32 address, U32 value)
+	void write(U32 address, U32 value, OpSize size)
 	{
-		switch (sizeof(A))
+		switch (size)
 		{
-		case sizeof(U8):
+		case OpSize::B:
 			*get_bytes_array(address) = value & 0xFF;
 			break;
-		case sizeof(U16):
+		case OpSize::W:
 			*get_bytes_array(address + 1) = (value & 0xFF00) >> 8;
 			*get_bytes_array(address + 0) = (value & 0x00FF) >> 0;
 			break;
-		case sizeof(U32):
+		case OpSize::DW:
 			*get_bytes_array(address + 3) = (value & 0xFF000000) >> 24;
 			*get_bytes_array(address + 2) = (value & 0x00FF0000) >> 16;
 			*get_bytes_array(address + 1) = (value & 0x0000FF00) >> 8;
@@ -95,11 +95,11 @@ struct RAM
 		}
 	}
 
-	template<typename A>
-	A read_and_write(U32 address, A value)
+	U32 read_and_write(U32 address, U32 value, OpSize size)
 	{
 		// in the actual circuit implementation, this is done without temporary variables or anything else.
-		A tmp = read<A>(address);
+		U32 tmp = read(address, size);
+		write(address, value, size);
 		return tmp;
 	}
 };

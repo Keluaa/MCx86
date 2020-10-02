@@ -3,16 +3,18 @@
 #include "data_types.h"
 
 
-enum OpSize : U8 
+enum OpSize : U8
 {
 	// the most used sizes have the fewest one bits
 	DW = 0b00,
 	W = 0b01,
-	B = 0b10
+	B = 0b10,
+	UNKNOWN = 0b11
 };
 
 
-enum OpType : U8 {
+enum OpType : U8 
+{
 	// the most used operand types have the fewest 1 bits
 	NONE = 0b000,
 	REG = 0b001,

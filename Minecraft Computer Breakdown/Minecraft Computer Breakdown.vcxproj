@@ -163,7 +163,7 @@
     <ClInclude Include="instructions.h" />
     <ClInclude Include="memory_manager.hpp" />
     <ClInclude Include="RAM.hpp" />
-    <ClInclude Include="registers.hpp" />
+    <ClInclude Include="registers.h" />
     <ClInclude Include="ROM.h" />
     <ClInclude Include="stack.h" />
   </ItemGroup>
@@ -172,6 +172,7 @@
     <ClCompile Include="IA-32_mapping.cpp" />
     <ClCompile Include="instructions.cpp" />
     <ClCompile Include="Minecraft Computer Breakdown.cpp" />
+    <ClCompile Include="registers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

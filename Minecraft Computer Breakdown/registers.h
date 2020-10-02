@@ -1,9 +1,9 @@
 ﻿#pragma once
 
 #include <memory>
-#include <exception>
 
 #include "data_types.h"
+#include "instructions.h"
 
 
 namespace Register
@@ -42,27 +42,27 @@ namespace Register
 };
 
 
-namespace Flags // todo: constexpr + replace everywhere for clarity
+namespace Flags
 {
-	constexpr U32 CF = 1 << 0;
-	constexpr U32 PF = 1 << 2;
-	constexpr U32 AF = 1 << 4;
-	constexpr U32 ZF = 1 << 6;
-	constexpr U32 SF = 1 << 7;
-	constexpr U32 TF = 1 << 8;
-	constexpr U32 IF = 1 << 9;
-	constexpr U32 DF = 1 << 10;
-	constexpr U32 OF = 1 << 11;
-	constexpr U32 IOPL = 0b11 << 12;
+	constexpr U32 CF	 = 1 << 0;
+	constexpr U32 PF	 = 1 << 2;
+	constexpr U32 AF	 = 1 << 4;
+	constexpr U32 ZF	 = 1 << 6;
+	constexpr U32 SF	 = 1 << 7;
+	constexpr U32 TF	 = 1 << 8;
+	constexpr U32 IF	 = 1 << 9;
+	constexpr U32 DF	 = 1 << 10;
+	constexpr U32 OF	 = 1 << 11;
+	constexpr U32 IOPL	 = 0b11 << 12;
 	constexpr U32 IOPL_L = 1 << 12;
 	constexpr U32 IOPL_H = 0b11 << 12;
-	constexpr U32 NT = 1 << 14;
-	constexpr U32 RF = 1 << 16;
-	constexpr U32 VM = 1 << 17;
-	constexpr U32 AC = 1 << 18;
-	constexpr U32 VIF = 1 << 19;
-	constexpr U32 VIP = 1 << 20;
-	constexpr U32 ID = 1 << 21;
+	constexpr U32 NT	 = 1 << 14;
+	constexpr U32 RF	 = 1 << 16;
+	constexpr U32 VM	 = 1 << 17;
+	constexpr U32 AC	 = 1 << 18;
+	constexpr U32 VIF	 = 1 << 19;
+	constexpr U32 VIP	 = 1 << 20;
+	constexpr U32 ID	 = 1 << 21;
 };
 
 
@@ -77,93 +77,11 @@ struct Registers
 	        0,   0,   0,   0,   0,   0,   0,   0
 	};
 
-	U32 read(const U8 register_id) const 
-	{
-		if (register_id < 8) {
-			return read_32(register_id);
-		}
-		else if (register_id < 16) {
-			return read_16(register_id);
-		}
-		else if (register_id < 20) {
-			return read_8_High(register_id);
-		}
-		else if (register_id < 24) {
-			return read_8_Low(register_id);
-		}
-		else {
-			throw std::logic_error("Wrong register id");
-		}
-	}
+	U32 read(const U8 register_id) const;
+	U32 read_index(U8 register_index, OpSize size) const;
 	
-	template<typename N>
-	N read_index(U8 register_index) const
-	{
-		switch (sizeof(N))
-		{
-		case sizeof(U8):
-			if (register_index < 4) {
-				// Low byte
-				return registers[register_index] & 0xFF;
-			} else {
-				// High byte
-				return (registers[register_index - 4] & 0xFF00) >> 8;
-			}
-		case sizeof(U16):
-			return registers[register_index] & 0xFFFF;
-		case sizeof(U32):
-			return registers[register_index];
-		default:
-			throw std::logic_error("Wrong register size");
-		}
-	}
-	
-	void write(const U8 register_id, const U32 new_value, const U32 other_value = 0)
-	{
-		if (register_id < 8) {
-			write_32(register_id, new_value);
-		}
-		else if (register_id < 16) {
-			write_16(register_id, new_value);
-		}
-		else if (register_id < 20) {
-			write_8_High(register_id, new_value);
-		}
-		else if (register_id < 24) {
-			write_8_Low(register_id, new_value);
-		}
-		else if (register_id == 24) {
-			// 64 bit assignment
-			write_32(0, new_value);
-			write_32(2, other_value);
-		}
-		else {
-			throw std::logic_error("Wrong register id");
-		}
-	}
-
-	template<typename N>
-	void write_index(U8 register_index, U32 value)
-	{
-		switch (sizeof(N))
-		{
-		case sizeof(U8):
-			if (register_index < 4) {
-				// Low byte
-				registers[register_index] |= value & 0xFF;
-			}
-			else {
-				// High byte
-				registers[register_index] |= (value & 0xFF) << 8;
-			}
-		case sizeof(U16):
-			registers[register_index] |= value & 0xFFFF;
-		case sizeof(U32):
-			registers[register_index] = value;
-		default:
-			throw std::logic_error("Wrong register size");
-		}
-	}
+	void write(const U8 register_id, const U32 new_value, const U32 other_value = 0);
+	void write_index(U8 register_index, U32 value, OpSize size);
 
 	U32 read_32(const U8 register_id) const     { return registers[register_id % 8]; }
 	U16 read_16(const U8 register_id) const     { return registers[register_id % 8] & 0xFFFF; }
@@ -215,6 +133,7 @@ struct Registers
 	/*
 		Control Registers
 	*/
+
 	U32 control_registers[4] {
 		// CR0 CR1 CR2 CR3
 			0,  0,  0,  0
@@ -241,28 +160,8 @@ struct Registers
 		Utilities
 	*/
 
-	void reset_general_purpose_registers()
-	{
-		std::memset(registers, 0, 8);
-	}
-
-	void reset_segments_registers()
-	{
-		std::memset(segments, 0, 6);
-	}
-
-	void reset_control_registers()
-	{
-		std::memset(control_registers, 0, 4);
-	}
-
-	void complete_reset()
-	{
-		reset_general_purpose_registers();
-		reset_segments_registers();
-		reset_control_registers();
-
-		EIP = 0;
-		EFLAGS = 0b10;
-	}
+	void reset_general_purpose_registers();
+	void reset_segments_registers();
+	void reset_control_registers();
+	void complete_reset();
 };
