@@ -516,13 +516,70 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 			INTERRUPT("#DE", 0);
 		}
 		
+		ret = q;
+		ret2 = r;
+		break;
+	}
+	case Opcodes::IDIV:
+	{
+		U32 r, q, n = data.op1, d = data.op2;
+		bit divByZero = false;
+		ALU::signed_divide(n, d, q, r, divByZero);
 		
+		if (divByZero) {
+			INTERRUPT("#DE", 0);
+		}
 		
+		ret = q;
+		ret2 = r;
+		break;
+	}
+	case Opcodes::IMUL:
+	{
+		ret = ALU::multiply(data.op1, data.op2);
+
+		update_overflow_flag(flags, data.op1, data.op2, ret, OpSize::UNKNOWN, OpSize::UNKNOWN, OpSize::UNKNOWN);
+		break;
+	}
+	case Opcodes::IMULX:
+	{
+		// this implementation exactly what is not happening in the circuit implementation:
+		// here we cast everything to 64 bits, perform 64 bit multiplication, 
+		// and return the last 32 bits of the result.
+		// In the circuit the circuit of this instruction is placed next to the circuit of IMUL,
+		// and the carries from the adders are stored, and when using IMULX, 
+		// we use them to compute the remaining 32 bits of the result.
+		U64 a = I64(I32(data.op1)), b = I64(I32(data.op2)), r;
+		r = ALU::multiply(a, b);
+		ret = U32(r >> 32);
+
+		// we can do this because we only care about the signs of the operands
+		update_overflow_flag(flags, data.op1, data.op2, ret, OpSize::DW, OpSize::DW, OpSize::DW);
+		break;
+	}
+	case Opcodes::INC:
+	{
+		ret = ALU::add_no_carry(data.op1, 1);
+		
+		update_overflow_flag(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		update_adjust_flag(flags, data.op1, data.op2);
+		update_parity_flag(flags, ret);
+		break;
+	}
+	case Opcodes::LAHF:
+	{
+		ret = flags & 0xFF;
+		break;
+	}
+	case Opcodes::LEA:
+	{
 		
 		break;
 	}
 	/*
-	case Opcodes_2::DAA:
+	case Opcodes::DAA:
 	{
 		break;
 	}
@@ -533,33 +590,6 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	{
 		op1_val_out = op2_val;
 		op1_val_out_set = 1;
-		break;
-	}
-	case Opcodes::MUL:
-	{
-		throw BadInstruction("MUL instruction should not be used. Use IMUL instead.", registers.EIP);
-	}
-	case Opcodes::IMUL:
-	{
-		// supports only the 2 operand form. This implies that the result is always truncated to
-		// match the size of the destination. This is made on purpose because it greatly simplifies
-		// the circuit implementation: no need for a double size output (64bits max), to write to
-		// serveral registers at once or to handle 3 operands at once. But most importantly, this
-		// means that the multiplier is 4 times smaller (half of the bits to be handled half of the
-		// times).
-		// Because of those benefits, there is no plan to support extended multiplication.
-		// The 3 operands form behaves like the 2 operands one, but with an immediate value, it will
-		// maybe be implemented.
-		if (inst->op2_type == Inst::None) {
-			throw BadInstruction("Only the 2 operands version of IMUL is supported.", registers.EIP);
-		}
-		op1_val_out = ALU::multiply(op1_val, op2_val);
-		op1_val_out_set = 1;
-
-		bit expected_sign = (ALU::check_is_negative(op1_val)) ^ (ALU::check_is_negative(op2_val));
-		bit overflow = expected_sign ^ ALU::check_is_negative(op1_val_out);
-		registers.flag_write_CF(overflow);
-		registers.flag_write_OF(overflow);
 		break;
 	}
 	case Opcodes::XCHG:
@@ -588,10 +618,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		}
 		break;
 	}
-	
 	*/
-
-
 	}
 	
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));

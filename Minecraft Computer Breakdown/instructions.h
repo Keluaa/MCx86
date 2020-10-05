@@ -180,6 +180,7 @@ namespace Opcodes
 	constexpr U8 IDIV    = 27 | arithmethic;
 	constexpr U8 IMUL    = 28 | arithmethic;
 	constexpr U8 INC     = 29 | arithmethic;
+	constexpr U8 LAHF    = 54 | arithmethic; // todo : fix numerotation
 	constexpr U8 LEA     = 30 | arithmethic;
 	constexpr U8 MOV     = 31 | arithmethic;
 	constexpr U8 MOVSX   = 32 | arithmethic;
@@ -209,8 +210,7 @@ namespace Opcodes
 	constexpr U8 ENTER   =  0 | not_arithmethic;
 	constexpr U8 HLT     =  1 | not_arithmethic;
 	constexpr U8 IN      =  2 | not_arithmethic;
-	constexpr U8 LAHF    =  3 | not_arithmethic;
-	constexpr U8 LAR     =  4 | not_arithmethic;
+	constexpr U8 LAR     =  4 | not_arithmethic; // todo : fix numerotation
 	constexpr U8 LGDT    =  5 | not_arithmethic;
 	constexpr U8 LGS     =  6 | not_arithmethic;
 	constexpr U8 LLDT    =  7 | not_arithmethic;
@@ -253,4 +253,8 @@ namespace Opcodes
 	constexpr U8 LOOP    =  6 | not_arithmethic | jmp;
 	constexpr U8 REP     =  7 | not_arithmethic | jmp | str;
 	constexpr U8 RET     =  8 | not_arithmethic | jmp;
+	
+	// Custom instructions
+	
+	constexpr U8 IMULX   = 53 | arithmethic; // used after IMUL or MUL on 32 bit operands, to extend the result to 64 bit
 };

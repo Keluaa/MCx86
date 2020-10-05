@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 
@@ -9,7 +9,7 @@ namespace IA32
 {
 	extern const std::map<U16, Inst> InstTable;
 
-	namespace Opcodes // TODO: remove?
+	namespace Opcodes // TODO: remove? It leaks into 
 	{
 		// Approximate opcodes. Usually the lowest possible for each mnemonic.
 		const U8 ADD = 0x00;
