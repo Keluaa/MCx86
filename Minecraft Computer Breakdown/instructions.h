@@ -41,95 +41,55 @@ struct InstData
 struct Inst
 {
 	/*
-	TODO: update
-	
-	Wait, is this how you are supposed to make a decoder ???
-	New Instruction format propositions:
-		- ? 8-16 bits: opcode
-		- 1 bit: address size override (0->32, 1->16), final size depends on external flags
-		- 1 bit: operand size override (0->32, 1->16), final size depends on external flags
-		- 1 bit: address byte size override
-		- 1 bit: operand byte size override
-		- 1 bit: write result to destination operand
-		- 1 bit: destination override: write the result to a specific register
-		- 5 bits : which register 
-	 	-> 0-7: EAX - EDI
-		-> 8-15: AX - DI
-		-> 16-23: AL - BL
-		-> 24: EAX:EDX
-		-> 25: AX:DX
-		-> 26-31: ?
-		- 1 bit: allow flags update ?
-	
-		- 1 bit: presence of register as first operand
-		- 1 bit: presence of address (or offset ?) as first/second operand
-		- 1 bit: presence of register as second operand
-  		- 1 bit: presence of immediate after other operands
-	 
-		- 3 bits: which first register (0-7, size controlled by override bits)
-		- 3 bits: which second register (0-7, size controlled by override bits)
-	
+	Instruction encoding format:
+		- 8 bits: opcode
+		- 1 bit : address size override (0->32, 1->16), final size depends on external flags
+		- 1 bit : operand size override (0->32, 1->16), final size depends on external flags
+		- 1 bit : address byte size override
+		- 1 bit : operand byte size override
+		- 1 bit : access flags write them after the instruction execution
+		- 3 bits: operand type of the first operand
+		- 3 bits: operand type of the second operand
+		- 3 bits: register of the first operand
+		- 3 bits: register of the second operand
+		- 1 bit : read the first operand source
+		- 1 bit : read the second operand source
+		- 1 bit : write the first return value to the first operand source
+		- 1 bit : write the second return value to the second operand source
+		- 1 bit : write the first return value to a specific register
+		- 1 bit : scale this specific register
+		- 3 bits: which register
 		- 32 bits: address value (or offset ?)
-		- 32 bits: immediate value
-	
-	
-	New opcode encoding proposal:
-		- caregory bits:
-		- Normal Arithmetic: update all of the flags depending on the unique result
-		- Jumps/Calls/Rets: no flags, sets EIP manually
-		- Strings ops: m8, m8 operands, can be repeated through the whole string
-		- ...
-		- other: no constraints
-	
-	New New opcode encoding proposal:
-		- 1 bit: trivial operation: most of arithmetic operations, etc...
-				-> can be executed without complex wiring
-		- trivial op:
-			-> 2 bits for ALU ops
-			
+		- 32 bits: immediate value			
 	*/
 	
 	U8 opcode;
 
+	// TODO : maybe combine 16 and 8 bits size overrides to a two flags only
 	bit address_size_override:1;
 	bit operand_size_override:1;
-	bit address_byte_size_override:1; // TODO : maybe combine byte size overrides to a single one
+	bit address_byte_size_override:1;
 	bit operand_byte_size_override:1;
-	
-	bit write_to_dest:1;
-	bit register_out_override:1;
-	U8 register_out:5;
-	
-	/*
-	Je veux:
-		- rien faire
-		- ecrire dans le dest, en fonction des params de l'inst
-		- ecrire dans un registre specifique
-		- ecrire dans un registre specifique, en fonction des params de l'inst
-		- ecrire dans deux registres, en fonction des params de l'inst
-		- ecrire dans deux registres specifiques, en fonction des params de l'inst
-	
-	Proposition:
-		- 1 bit: scale both outputs with inst size params (including overrides)
-		- 1 bit: write result 1 to op1 source
-		- 1 bit: write result 2 to op2 source
-		- 1 bit: both outputs overrides
-		- 5 bit: register out 1
-		- 5 bit: register out 2
-	*/
-	
+
 	bit get_flags:1;
 	
 	OpType op1_type:3;
 	OpType op2_type:3;
-	
-	bit read_op1:1;
-	bit read_op2:1;
-	
+
 	U8 op1_register:3;
 	U8 op2_register:3;
 	
-	U8:2; // alignment
+	bit read_op1:1;
+	bit read_op2:1;
+
+	bit write_ret1_to_op1:1;
+	bit write_ret2_to_op2:1;
+
+	bit write_ret1_to_register:1;
+	bit scale_output_override:1;
+	U8 register_out:3;
+	
+	U8:0; // alignment
 	
 	// both of those values can be used as general purpose values in spacial instrucions (bound, call...)
 	U32 address_value; 

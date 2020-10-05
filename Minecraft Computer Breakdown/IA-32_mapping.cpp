@@ -2,6 +2,8 @@
 #include "IA-32_mapping.h"
 #include "registers.h"
 
+// TODO: fix macros, fix offsets in macros, automate the process from a table
+
 #define size16 (0b11 << 22) // sets the operand and address sizes to two bytes
 #define size8 (0b11 << 20) // sets the operand and address sizes to one byte
 #define write_dest (0b1 << 19) // sets write to dest
