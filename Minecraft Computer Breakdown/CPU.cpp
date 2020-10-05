@@ -130,7 +130,7 @@ void CPU::execute_instruction()
 	// execute the instruction
 	U32 return_value = 0;
 	U32 return_value_2 = 0;
-	if (inst->opcode & 0x80) { 
+	if (inst->opcode & Opcodes::not_arithmethic) { 
 		// non-trivial op
 		execute_non_arithmetic_instruction(inst);
 	} else { 
@@ -208,7 +208,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		
 		NYI; // TODO: those register calls should NOT be there!
 
-		registers.write(Register::AH, q); 
+		registers.write(Register::AH, q);
 		registers.write(Register::AL, r);
 
 		update_sign_flag(flags, r, OpSize::B);
