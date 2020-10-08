@@ -17,10 +17,13 @@ enum OpType : U8
 {
 	// the most used operand types have the fewest 1 bits
 	NONE = 0b000,
-	REG = 0b001,
-	MEM = 0b010,
-	IMM = 0b100,
-	M_M = 0b011, // m16&16 or m32&32 operand
+	REG  = 0b001, // general purpose register
+	MEM  = 0b010, // memory operand
+	IMM  = 0b100, // immediate
+	M_M  = 0b011, // m16&16 or m32&32 operand
+	SREG = 0b101, // Segment register
+	MOFF = 0b110, // Memory offset from a segment
+	CREG = 0b111, // Control/Debug/Test register
 };
 
 
@@ -59,7 +62,9 @@ struct Inst
 		- 1 bit : write the first return value to a specific register
 		- 1 bit : scale this specific register
 		- 3 bits: which register
-		- 32 bits: address value (or offset ?)
+		- 1 bit: pre-compute address using the mod r/m, SIB and displacement bytes
+		- 16 bits: mod r/m and SIB bytes
+		- 32 bits: address value (or displacement)
 		- 32 bits: immediate value			
 	*/
 	
@@ -89,7 +94,25 @@ struct Inst
 	bit scale_output_override:1;
 	U8 register_out:3;
 	
+	bit compute_address:1;
+	
 	U8:0; // alignment
+	
+	// Optional mod r/r and SIB bytes
+	union {
+		U16 raw_address_specifier;
+		struct {
+			// mod r/m byte
+			U8 mod:2;
+			U8 reg:3;
+			U8 rm:3;
+			
+			// SIB byte
+			U8 scale:2;
+			U8 index:3;
+			U8 base:3;
+		} mod_rm_sib;
+	};
 	
 	// both of those values can be used as general purpose values in spacial instrucions (bound, call...)
 	U32 address_value; 
@@ -150,7 +173,7 @@ namespace Opcodes
 	constexpr U8 NOP     = 36 | arithmethic;
 	constexpr U8 NOT     = 37 | arithmethic;
 	constexpr U8 OR      = 38 | arithmethic;
-	constexpr U8 RCL     = 39 | arithmethic;
+	constexpr U8 ROT     = 39 | arithmethic; // heavily modified to fit in one instruction
 	constexpr U8 SAL     = 40 | arithmethic;
 	constexpr U8 SBB     = 41 | arithmethic;
 	constexpr U8 SETcc   = 42 | arithmethic;
@@ -217,4 +240,5 @@ namespace Opcodes
 	// Custom instructions
 	
 	constexpr U8 IMULX   = 53 | arithmethic; // used after IMUL or MUL on 32 bit operands, to extend the result to 64 bit
+	constexpr U8 MULX    = 55 | arithmethic; // used to perform 64 bit multiplication
 };

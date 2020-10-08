@@ -58,12 +58,21 @@ OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_
 
 void CPU::execute_instruction()
 {
+	// TODO: I think I misunderstood what the address size override prefix: it only changes the size of the address,
+	//  not how many bytes are fetched from memory, which is also controlled by the operand size prefix 
 	const Inst* inst = instructions[registers.EIP]; // TODO: low level instruction fetching
 	currentInstruction = inst;
 	
 	ALU::branchMonitor.reset();
 	
 	InstData data = inst->getInstData();
+	
+	// compute address using the mod r/m, SIB and displacement bytes
+	if (inst->compute_address) {
+		data.address = compute_address(!inst->address_size_override, data.op1_size); // TODO: more things to do to have the size of the address
+	}
+	
+	// TODO: use the computed address to read the operands. Also fix the operands size.
 	
 	// Read the operands
 	U32 op1_val = 0;
@@ -83,6 +92,19 @@ void CPU::execute_instruction()
 			break;
 		case OpType::M_M:
 			// used only by BOUND for the second operand
+			break;
+		case OpType::SREG:
+			data.op1_size = OpSize::W; // all segment registers have a fixed length
+			data.op1 = registers.read_segment(inst->op1_register);
+			break;
+		case OpType::MOFF:
+			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			WARNING("moffs operands are not correctly addressed."); // TODO
+			data.op1 = ram.read(inst->address_value, data.op1_size);
+			break;
+		case OpType::CREG:
+			data.op1_size = OpSize::DW;
+			data.op1 = registers.read_control_register(inst->op1_register);
 			break;
 		case OpType::NONE:
 			break;
@@ -116,6 +138,19 @@ void CPU::execute_instruction()
 			}
 			data.op3_size = data.op2_size;
 			break;
+		case OpType::SREG:
+			data.op2_size = OpSize::W;
+			data.op2 = registers.read_segment(inst->op2_register);
+			break;
+		case OpType::MOFF:
+			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			WARNING("moffs operands are not correctly addressed."); // TODO
+			data.op2 = ram.read(inst->address_value, data.op1_size);
+			break;
+		case OpType::CREG:
+			data.op2_size = OpSize::DW;
+			data.op2 = registers.read_control_register(inst->op2_register);
+			break;
 		case OpType::NONE:
 			break;
 		}
@@ -130,7 +165,7 @@ void CPU::execute_instruction()
 	// execute the instruction
 	U32 return_value = 0;
 	U32 return_value_2 = 0;
-	if (inst->opcode & Opcodes::not_arithmethic) { 
+	if (inst->opcode & 0x80) { 
 		// non-trivial op
 		execute_non_arithmetic_instruction(inst);
 	} else { 
@@ -143,7 +178,16 @@ void CPU::execute_instruction()
 	}
 
 	// write the output of the instruction to its destination
-	if (inst->write_to_dest) {
+	if (inst->write_ret1_to_register) {
+		if (inst->scale_output_override) {
+			registers.write_index(inst->register_out, return_value, data.op1_size);
+		}
+		else {
+			// TODO: fix register addressing here, because we can only access 8 registers like this 
+			registers.write(inst->register_out, return_value);
+		}
+	}
+	else if (inst->write_ret1_to_op1) {
 		switch (inst->op1_type) {
 		case OpType::REG:
 			registers.write_index(inst->op1_register, return_value, data.op1_size);
@@ -155,8 +199,18 @@ void CPU::execute_instruction()
 			break;
 		}
 	}
-	else if (inst->register_out_override) {
-		registers.write(inst->register_out, return_value);
+	
+	if (inst->write_ret2_to_op2) {
+		switch (inst->op2_type) {
+		case OpType::REG:
+			registers.write_index(inst->op2_register, return_value_2, data.op2_size);
+			break;
+		case OpType::MEM:
+			ram.write(inst->address_value, return_value_2, data.op2_size);
+			break;
+		default:
+			break;
+		}
 	}
 }
 
@@ -208,7 +262,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		
 		NYI; // TODO: those register calls should NOT be there!
 
-		registers.write(Register::AH, q);
+		registers.write(Register::AH, q); 
 		registers.write(Register::AL, r);
 
 		update_sign_flag(flags, r, OpSize::B);
@@ -505,7 +559,6 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		update_adjust_flag(flags, data.op1, -1); 
 		break;
 	}
-	// ------------ perfect implementation (I hope) up to here -------------
 	case Opcodes::DIV:
 	{
 		U32 r, q, n = data.op1, d = data.op2;
@@ -543,6 +596,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	}
 	case Opcodes::IMULX:
 	{
+		// TODO: change this to perform full 64 bit multiplication instead
 		// this implementation exactly what is not happening in the circuit implementation:
 		// here we cast everything to 64 bits, perform 64 bit multiplication, 
 		// and return the last 32 bits of the result.
@@ -575,6 +629,150 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	}
 	case Opcodes::LEA:
 	{
+		ret = data.address;
+		break;
+	}
+	// ------------ perfect implementation (I hope) up to here -------------
+	case Opcodes::MOV:
+	{
+		ret = data.op2;
+		// TODO : segment change checks, same for control registers, and other things...
+		break;
+	}
+	case Opcodes::MOVSX:
+	{
+		ret = ALU::sign_extend(data.op2, data.op2_size);
+		break;
+	}
+	case Opcodes::MOVZX:
+	{
+		ret = data.op2;
+		break;
+	}
+	case Opcodes::MUL:
+	{
+		ret = ALU::multiply(data.op1, data.op2);
+
+		// update the flags
+		bit carry = 0;
+		switch(data.op1_size)
+		{
+		case OpSize::B:
+			carry = bool(ret & 0xFF00);
+			break;
+		case OpSize::W:
+			carry = bool(ret & 0xFFFF0000);
+			break;
+		case OpSize::DW:
+			throw BadInstruction("MUL does not support 64bit results. Use MULX.", registers.EIP);
+		default:
+			break; // handled in MULX
+		}
+		
+		if (carry) {
+			flags |= Flags::CF | Flags::OF;
+		}
+		else {
+			flags &= ~(Flags::CF | Flags::OF);
+		}
+		break;
+	}
+	case Opcodes::MULX:
+	{
+		// in the circuit, the algorithm used to get a 64bit result is optimized
+		// because the high bits of the operands are 0
+		U64 a = data.op1, b = data.op2, r;
+		r = ALU::multiply(a, b);
+		ret = U32(r);
+		ret2 = U32(r >> 32);
+		
+		bit carry = bool(ret2);
+		if (carry) {
+			flags |= Flags::CF | Flags::OF;
+		}
+		else {
+			flags &= ~(Flags::CF | Flags::OF);
+		}
+		break;
+	}
+	case Opcodes::NEG:
+	{
+		ret = ALU::negate(data.op1);
+		
+		if (ALU::check_equal_zero(data.op1)) {
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
+		
+		flags &= ~Flags::OF; // no overflow is possible
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		update_parity_flag(flags, ret);
+		break;
+	}
+	case Opcodes::NOP:
+	{
+		break;
+	}
+	case Opcodes::NOT:
+	{
+		ret = ALU::not_(data.op1);
+		break;
+	}
+	case Opcodes::OR:
+	{
+		ret = ALU::or_(data.op1, data.op2);
+		
+		flags &= ~(Flags::CF | Flags::OF);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		update_parity_flag(flags, ret);
+		break;
+	}
+	case Opcodes::ROT:
+	{
+		// To encode this operation in one opcode, we use the immediate to specify the operation:
+		// op1: dest, op2: source register value if any
+		// op3: bit field with the count if any:
+		//  - bits 0-4: count
+		//  - 5: use the previous 5 bits as count instead of op2
+		//  - 6: rotate left (else right)
+		//  - 7: include the carry in the rotations (RC- instructions)
+		U8 count = data.op3 & 0b11111;
+		bit use_imm = data.op3 & (1 << 5);
+		bit rot_left = data.op3 & (1 << 6);
+		bit rot_carry = data.op3 & (1 << 7);
+		
+		if (!use_imm) {
+			count = data.op2;
+		}
+		
+		bit carry = flags & Flags::CF;
+		if (rot_carry) {
+			if (rot_left) {
+				ret = ALU::rotate_left_carry(data.op1, carry, count, data.op1_size);
+			}
+			else {
+				ret = ALU::rotate_right_carry(data.op1, carry, count, data.op1_size);
+			}
+		}
+		else {
+			if (rot_left) {
+				ret = ALU::rotate_left(data.op1, carry, count, data.op1_size);
+			}
+			else {
+				ret = ALU::rotate_right(data.op1, carry, count, data.op1_size);
+			}
+		}
+		
+		if (carry) {
+			flags |= Flags::CF;
+		}
+		else {
+			flags &= ~Flags::CF;
+		}
 		
 		break;
 	}
@@ -586,12 +784,6 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	*/
 
 	/*
-	case Opcodes::MOV:
-	{
-		op1_val_out = op2_val;
-		op1_val_out_set = 1;
-		break;
-	}
 	case Opcodes::XCHG:
 	{
 		// op1 <-op2
@@ -659,6 +851,102 @@ void CPU::execute_non_arithmetic_instruction(const Inst* inst)
 		break;
 	}
 	*/
+}
+
+U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
+{
+	U32 address = currentInstruction->address_value;
+	U8 mod = currentInstruction->mod_rm_sib.mod;
+	U8 rm = currentInstruction->mod_rm_sib.rm;
+	
+	if (mod == 0b11) {
+		address = registers.read_index(rm, opSize);
+	}
+	else if (_32bits_mode) {
+		if (rm == 0b100) {
+			// use the SIB byte
+			U8 scale = currentInstruction->mod_rm_sib.scale;
+			U8 index = currentInstruction->mod_rm_sib.index;
+			U8 base = currentInstruction->mod_rm_sib.base;
+			
+			U32 index_val = registers.read(index);
+			
+			// scale the index using chained shifters
+			switch (scale)
+			{
+			case 0b11: index_val <<= 1; // *8
+			case 0b10: index_val <<= 1; // *4
+			case 0b01: index_val <<= 1; // *2
+			default:   break;			// *1
+			}
+			
+			address = ALU::add_no_carry(address, index_val);
+			if (mod == 0b00 && base == 0b101) {
+				// no base
+			}
+			else {
+				U32 base_val = registers.read(base);
+				address = ALU::add_no_carry(address, base_val);
+			}
+		}
+		else if (mod == 0b00 && rm == 0b110) {
+			// 'address' has already the right value
+		}
+		else {
+			address = registers.read(rm); // only 32 bits registers are read here
+		}
+	}
+	else { // 16 bits mode
+		U16 a = 0, b = 0;
+			
+		switch (rm)
+		{
+			// TODO: this switch statememt cam greatly be simplified
+				
+		case 0b000:
+			a = registers.read(Register::BX);
+			b = registers.read(Register::SI);
+			break;
+				
+		case 0b001:
+			a = registers.read(Register::BX);
+			b = registers.read(Register::DI);
+			break;
+				
+		case 0b010:
+			a = registers.read(Register::BP);
+			b = registers.read(Register::SI);
+			break;
+				
+		case 0b011:
+			a = registers.read(Register::BP);
+			b = registers.read(Register::DI);
+			break;
+				
+		case 0b100:
+			a = registers.read(Register::SI);
+			break;
+				
+		case 0b101:
+			a = registers.read(Register::DI);
+			break;
+			
+		case 0b110:
+			if (mod != 0b00) {
+				a = registers.read(Register::BP);
+			}
+			break;
+			
+		case 0b111:
+			a = registers.read(Register::BX);
+			break;
+		}
+		
+		address = ALU::add_no_carry(address, a);
+		address = ALU::add_no_carry(address, b);
+	}
+	
+	return address;
 }
 
 void CPU::push_2(U16 value)

@@ -30,6 +30,8 @@ class CPU
 	void execute_non_arithmetic_instruction(const Inst* inst);
 	void execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	
+	U32 compute_address(bit _32bits_mode, OpSize opSize) const;
+	
 	void push_2(U16 value);
 	void push_4(U32 value);
 	

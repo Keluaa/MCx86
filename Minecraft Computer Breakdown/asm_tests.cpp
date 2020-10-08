@@ -67,6 +67,29 @@ void test_bound()
 	);
 }
 
+void test_neg_OF()
+{
+	int a = 0, b = 0, c = 0;
+    	
+    __asm volatile (
+    	"movl %2, %%eax\n\t"
+        "movl $0, %%edx\n\t"
+    	"negl %%eax\n\t"
+        "jno nof\n\t"
+        "orl $0x2, %%edx\n\t"
+        "nof:\n\t"
+        "jnc ncf\n\t"
+        "orl $0x1, %%edx\n\t"
+        "ncf:\n\t"
+    	"movl %%eax, %0\n\t"
+        "movl %%edx, %1\n\t"
+    	: "=m" (b), "=m" (c)
+        : "m" (a)
+    );
+                                              	
+	printf("a: %d, b: %d, c: %d\n", a, b, c);
+}
+
 int main ()
 {
 	test_AAA();

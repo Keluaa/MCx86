@@ -11,34 +11,43 @@ namespace Register
 	// arbitrary values for each register
 
 	const U8 EAX = 0;
-	/*const U8 ECX = 1;
+	const U8 ECX = 1;
 	const U8 EDX = 2;
-	const U8 EBX = 3;*/
+	const U8 EBX = 3;
 	const U8 ESP = 4;
-	/*const U8 EBP = 5;
+	const U8 EBP = 5;
 	const U8 ESI = 6;
-	const U8 EDI = 7;*/
+	const U8 EDI = 7;
 
 	const U8 AX = 8;
-	/*const U8 CX = 9;
+	const U8 CX = 9;
 	const U8 DX = 10;
 	const U8 BX = 11;
 	const U8 SP = 12;
 	const U8 BP = 13;
 	const U8 SI = 14;
-	const U8 DI = 15;*/
+	const U8 DI = 15;
 
 	const U8 AH = 16;
-	/*const U8 CH = 17;
+	const U8 CH = 17;
 	const U8 DH = 18;
-	const U8 BH = 19;*/
+	const U8 BH = 19;
 
 	const U8 AL = 20;
-	/*const U8 CL = 21;
+	const U8 CL = 21;
 	const U8 DL = 22;
-	const U8 BL = 23;*/
+	const U8 BL = 23;
 
-	//const U8 EAX_EDX = 24; // used only for 64 bit assignements
+	const U8 CS = 0;
+	const U8 SS = 1;
+	const U8 DS = 2;
+	const U8 ES = 3;
+	const U8 FS = 4;
+	const U8 GS = 5;
+	
+	const U8 CR0 = 0;
+	const U8 CR1 = 0;
+	const U8 CR3 = 0;
 };
 
 
@@ -101,20 +110,9 @@ struct Registers
 		// CS SS DS ES FS GS
 		   0, 0, 0, 0, 0, 0
 	};
-
-	U16 segment_read_CS() const { return segments[0]; }
-	U16 segment_read_SS() const { return segments[1]; }
-	U16 segment_read_DS() const { return segments[2]; }
-	U16 segment_read_ES() const { return segments[3]; }
-	U16 segment_read_FS() const { return segments[4]; }
-	U16 segment_read_GS() const { return segments[5]; }
-
-	void segment_write_CS(U16 value) { segments[0] = value; }
-	void segment_write_SS(U16 value) { segments[1] = value; }
-	void segment_write_DS(U16 value) { segments[2] = value; }
-	void segment_write_ES(U16 value) { segments[3] = value; }
-	void segment_write_FS(U16 value) { segments[4] = value; }
-	void segment_write_GS(U16 value) { segments[5] = value; }
+	
+	U16 read_segment(U8 index) const { return segments[index]; }
+	void write_segment(U8 index, U16 value) { segments[index] = value; }
 
 	/*
 		Instruction pointer

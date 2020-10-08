@@ -80,9 +80,9 @@ namespace ALU
 		switch (size)
 		{
 		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U32) * 8 - 1; break;
-		default: last_bit_pos = sizeof(N) * 8 - 1;   break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
 
 		// check if the last bit is set
@@ -184,14 +184,24 @@ namespace ALU
 		an unsigned type which is double its size.
 	*/
 	template<typename N>
-	constexpr N sign_extend(N n, bool _internal_call = false)
+	constexpr N sign_extend(N n, OpSize prev_size = OpSize::UNKNOWN, bool _internal_call = false)
 	{
+		// TODO : check all usages, we should always use prev_size
 		static_assert(std::is_integral<N>{}, "sign_extend operand must be of integral type");
 		static_assert(std::is_unsigned<N>{}, "sign_extend operand must be unsigned (to prevent auto-extend)");
 		
 		if (!_internal_call) USE_BRANCH(branchMonitor);
 
-		N mask = 1 << (sizeof(N) * 8 / 2 - 1);  // start at the middle (previous end of n)
+		U8 last_bit_pos = 0;
+		switch (prev_size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 / 2 - 1; break; // not useful to have, but hey why not
+		case W:  last_bit_pos = sizeof(U16) * 8 / 2 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 / 2 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 / 2 - 1; break; // start at the middle by default
+		}
+		
+		N mask = 1 << last_bit_pos;  
 		const bit fill = bool(n & mask);
 		mask <<= 1;
 		
@@ -254,6 +264,126 @@ namespace ALU
 
 		// flat bitwise operation: each result bits are independant from each other
 		return ~n;
+	}
+	
+	
+	template<typename N>
+	constexpr N rotate_left_carry(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
+	{
+		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+
+		USE_BRANCH(branchMonitor);
+		
+		U8 last_bit_pos = 0;
+		switch (size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
+		}
+		typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
+		
+		count &= 0b11111; // max 31 rotations
+		bit tmp = carry, tmpc = 0;
+		for (int i = 0; i < count; i++) {
+			tmpc = bool(n & mask);
+			n <<= 1;
+			n |= tmp;
+			tmp = tmpc;
+		}
+		
+		carry = tmp;
+		return n;
+	}
+	
+	
+	template<typename N>
+	constexpr N rotate_right_carry(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
+	{
+		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+
+		USE_BRANCH(branchMonitor);
+		
+		U8 last_bit_pos = 0;
+		switch (size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
+		}
+		
+		count &= 0b11111; // max 31 rotations
+		bit tmp = carry, tmpc = 0;
+		for (int i = 0; i < count; i++) {
+			tmpc = bool(n & 0b1);
+			n >>= 1;
+			n |= tmp << last_bit_pos;
+			tmp = tmpc;
+		}
+		
+		carry = tmp;
+		return n;
+	}
+	
+	
+	template<typename N>
+	constexpr N rotate_left(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
+	{
+		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+
+		USE_BRANCH(branchMonitor);
+		
+		U8 last_bit_pos = 0;
+		switch (size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
+		}
+		typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
+		
+		count &= 0b11111; // max 31 rotations
+		bit tmp = 0;
+		for (int i = 0; i < count; i++) {
+			tmp = bool(n & mask);
+			n <<= 1;
+			n |= tmp;
+		}
+		
+		carry = tmp;
+		return n;
+	}
+	
+	
+	template<typename N>
+	constexpr N rotate_right(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
+	{
+		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+
+		USE_BRANCH(branchMonitor);
+		
+		U8 last_bit_pos = 0;
+		switch (size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
+		}
+		
+		count &= 0b11111; // max 31 rotations
+		bit tmp = 0;
+		for (int i = 0; i < count; i++) {
+			tmp = bool(n & 0b1);
+			n >>= 1;
+			n |= tmp << last_bit_pos;
+		}
+		
+		carry = tmp;
+		return n;
 	}
 
 
@@ -457,6 +587,8 @@ namespace ALU
 		else {
 			res = n;
 		}
+		
+		return res;
 	}
 
 

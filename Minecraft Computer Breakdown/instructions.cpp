@@ -3,7 +3,10 @@
 
 
 Inst::Inst(U8 opcode, U32 flags, U32 address_value, U32 immediate_value)
-	: opcode(opcode), address_value(address_value), immediate_value(immediate_value)
+	: opcode(opcode), 
+	  raw_address_specifier(0),
+	  address_value(address_value),
+	  immediate_value(immediate_value)
 {
 	// TODO : fix offsets
 	address_size_override = (flags >> 23) & 1;
@@ -29,7 +32,7 @@ InstData Inst::getInstData() const
 {
 	return InstData{
 		0, 0, 0,
-		address_value,
+		0,
 		immediate_value,
 		OpSize::DW, OpSize::DW, OpSize::DW
 	};
