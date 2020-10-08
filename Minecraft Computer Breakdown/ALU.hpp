@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <type_traits>
 
@@ -270,7 +270,7 @@ namespace ALU
 	template<typename N>
 	constexpr N rotate_left_carry(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
 	{
-		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+		static_assert(std::is_integral<N>{}, "rotate_left_carry operand must be of integral type");
 
 		USE_BRANCH(branchMonitor);
 		
@@ -301,7 +301,7 @@ namespace ALU
 	template<typename N>
 	constexpr N rotate_right_carry(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
 	{
-		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+		static_assert(std::is_integral<N>{}, "rotate_right_carry operand must be of integral type");
 
 		USE_BRANCH(branchMonitor);
 		
@@ -331,7 +331,7 @@ namespace ALU
 	template<typename N>
 	constexpr N rotate_left(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
 	{
-		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+		static_assert(std::is_integral<N>{}, "rotate_left operand must be of integral type");
 
 		USE_BRANCH(branchMonitor);
 		
@@ -361,7 +361,7 @@ namespace ALU
 	template<typename N>
 	constexpr N rotate_right(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
 	{
-		static_assert(std::is_integral<N>{}, "not operand must be of integral type");
+		static_assert(std::is_integral<N>{}, "rotate_right operand must be of integral type");
 
 		USE_BRANCH(branchMonitor);
 		
@@ -385,6 +385,66 @@ namespace ALU
 		carry = tmp;
 		return n;
 	}
+
+
+    template<typename N>
+    constexpr N shift_left(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN)
+    {
+        static_assert(std::is_integral<N>{}, "shift_left operand must be of integral type");
+
+        USE_BRANCH(branchMonitor);
+		
+		U8 last_bit_pos = 0;
+		switch (size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
+		}
+        typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
+
+        bit tmp = 0;
+        for (int i = 0; i < count; i++) {
+            tmp = bool(n & mask);
+            n <<= 1;
+        }
+
+        carry = tmp;
+        return n;
+    }
+
+
+    template<typename N>
+    constexpr N shift_right(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN, bit keep_sign = false)
+    {
+        static_assert(std::is_integral<N>{}, "shift_right operand must be of integral type");
+
+        USE_BRANCH(branchMonitor);
+
+        N sign = 0;
+        if (keep_sign) {
+            U8 last_bit_pos = 0;
+            switch (size)
+            {
+            case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+            case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+            case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+            default: last_bit_pos = sizeof(N)   * 8 - 1; break;
+            }
+            sign = n & (1 << last_bit_pos);
+        }
+		
+        bit tmp = 0;
+        for (int i = 0; i < count; i++) {
+            tmp = bool(n & 0b1);
+            n >>= 1;
+        }
+
+        n |= sign; // the sign is ORed into the result, to match the behaviour of SAR
+        carry = tmp;
+        return n;
+    }
 
 
 	template<typename N>

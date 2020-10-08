@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "data_types.h"
 
@@ -163,7 +163,7 @@ namespace Opcodes
 	constexpr U8 IDIV    = 27 | arithmethic;
 	constexpr U8 IMUL    = 28 | arithmethic;
 	constexpr U8 INC     = 29 | arithmethic;
-	constexpr U8 LAHF    = 54 | arithmethic; // todo : fix numerotation
+	constexpr U8 LAHF    = 54 | arithmethic; // TODO : fix numerotation
 	constexpr U8 LEA     = 30 | arithmethic;
 	constexpr U8 MOV     = 31 | arithmethic;
 	constexpr U8 MOVSX   = 32 | arithmethic;
@@ -174,7 +174,8 @@ namespace Opcodes
 	constexpr U8 NOT     = 37 | arithmethic;
 	constexpr U8 OR      = 38 | arithmethic;
 	constexpr U8 ROT     = 39 | arithmethic; // heavily modified to fit in one instruction
-	constexpr U8 SAL     = 40 | arithmethic;
+	constexpr U8 SAHF    = 56 | arithmethic; // TODO : fix numerotation
+    constexpr U8 SHFT    = 40 | arithmethic; // heavily modified to fit in one instruction
 	constexpr U8 SBB     = 41 | arithmethic;
 	constexpr U8 SETcc   = 42 | arithmethic;
 	constexpr U8 SHRD    = 43 | arithmethic;
@@ -208,7 +209,7 @@ namespace Opcodes
 	constexpr U8 PUSH    = 16 | not_arithmethic;
 	constexpr U8 PUSHA   = 17 | not_arithmethic;
 	constexpr U8 PUSHF   = 18 | not_arithmethic;
-	constexpr U8 SAHF    = 19 | not_arithmethic;
+	
 	constexpr U8 SGDT    = 20 | not_arithmethic;
 	constexpr U8 SMSW    = 21 | not_arithmethic;
 	constexpr U8 STR     = 22 | not_arithmethic;
