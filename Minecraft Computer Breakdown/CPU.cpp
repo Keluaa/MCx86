@@ -1,7 +1,9 @@
-﻿
+
 #include <iostream>
 
+#include "ALU.hpp"
 #include "CPU.h"
+#include "instructions.h"
 
 #define NYI throw NotImplemented(opcode, registers.EIP)
 
@@ -748,22 +750,36 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		if (!use_imm) {
 			count = data.op2;
 		}
+
+        U8 last_bit_pos = 0;
+		switch (data.op1_size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+        case UNKNOWN: throw BadInstruction("Incorrect Operand Size", registers.EIP);
+		}
 		
 		bit carry = flags & Flags::CF;
+        bit OF = 0;
 		if (rot_carry) {
 			if (rot_left) {
 				ret = ALU::rotate_left_carry(data.op1, carry, count, data.op1_size);
+                OF = carry != bit(ret & (1 << last_bit_pos));
 			}
 			else {
 				ret = ALU::rotate_right_carry(data.op1, carry, count, data.op1_size);
+                OF = bit(ret & (1 << last_bit_pos)) != bit(ret & (1 << (last_bit_pos - 1)));
 			}
 		}
 		else {
 			if (rot_left) {
 				ret = ALU::rotate_left(data.op1, carry, count, data.op1_size);
+                OF = carry != bit(ret & (1 << last_bit_pos));
 			}
 			else {
 				ret = ALU::rotate_right(data.op1, carry, count, data.op1_size);
+                OF = bit(ret & (1 << last_bit_pos)) != bit(ret & (1 << (last_bit_pos - 1)));
 			}
 		}
 		
@@ -773,7 +789,86 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		else {
 			flags &= ~Flags::CF;
 		}
+        
+        if (OF) {
+            flags |= Flags::OF;
+        }
+        else {
+            flags &= Flags::OF;
+        }
 		
+		break;
+	}
+    case Opcodes::SAHF:
+	{
+        // store only SF, ZF, AF, PF and CF from AH
+        flags = (flags & 0xFF) | (data.op1 & 0b11010101);
+		break;
+	}
+    case Opcodes::SHFT:
+    {
+        // To encode this operation in one opcode, we use the immediate to specify the operation:
+		// op1: dest, op2: source register value if any
+		// op3: bit field with the count if any:
+		//  - bits 0-4: count
+		//  - 5: use the previous 5 bits as count instead of op2
+		//  - 6: shift left (else right)
+        //  - 7: keep the sign (only for right shifts)
+		U8 count = data.op3 & 0b11111;
+		bit use_imm = data.op3 & (1 << 5);
+		bit rot_left = data.op3 & (1 << 6);
+        bit keep_sign = data.op3 & (1 << 7);
+
+        if (!use_imm) {
+            count = data.op2;
+        }
+
+        U8 last_bit_pos = 0;
+		switch (data.op1_size)
+		{
+		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+        case UNKNOWN: throw BadInstruction("Incorrect Operand Size", registers.EIP);
+		}
+
+        bit carry = 0;
+        bit OF = 0;
+        if (rot_left) {
+            ret = ALU::shift_left(data.op1, carry, count, data.op1_size);
+            OF = bool(ret & (1 << last_bit_pos)) != carry;
+        }
+        else {
+            ret = ALU::shift_right(data.op1, carry, count, data.op1_size, keep_sign);
+            if (keep_sign) {
+                OF = 0;
+            }
+            else {
+                OF = bool(data.op1 & (1 << last_bit_pos));
+            }
+        }
+
+        if (carry) {
+            flags |= Flags::CF;
+        }
+        else {
+            flags &= ~Flags::CF;
+        }
+
+        if (OF) {
+            flags |= Flags::OF;
+        }
+        else {
+            flags &= ~Flags::OF;
+        }
+
+        update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		update_parity_flag(flags, ret);
+    }
+    case Opcodes::SBB:
+	{
+        // TODO
 		break;
 	}
 	/*
