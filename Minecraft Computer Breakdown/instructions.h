@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "data_types.h"
 
@@ -177,8 +177,8 @@ namespace Opcodes
 	constexpr U8 SAHF    = 56 | arithmethic; // TODO : fix numerotation
     constexpr U8 SHFT    = 40 | arithmethic; // heavily modified to fit in one instruction
 	constexpr U8 SBB     = 41 | arithmethic;
-	constexpr U8 SETcc   = 42 | arithmethic;
-	constexpr U8 SHRD    = 43 | arithmethic;
+	constexpr U8 SETcc   = 42 | arithmethic; // heavily modified to fit in one instruction
+	constexpr U8 SHD     = 43 | arithmethic; // merged SHLD and SHRD
 	constexpr U8 SLDT    = 44 | arithmethic;
 	constexpr U8 STC     = 45 | arithmethic;
 	constexpr U8 STD     = 46 | arithmethic;

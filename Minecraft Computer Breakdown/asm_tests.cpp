@@ -90,8 +90,35 @@ void test_neg_OF()
 	printf("a: %d, b: %d, c: %d\n", a, b, c);
 }
 
+void test_SBB()
+{
+	char a = 40, b = 60, c = 80, d = 0, e = 0, carry = 0, of = 0;
+	
+	__asm volatile (
+		"movb %4, %%ah\n\t"
+		"movb %5, %%al\n\t"
+		"movb %6, %%dl\n\t"
+		"subb %%dl, %%al\n\t"
+		"sbbb $0, %%ah\n\t"
+		"movb %%ah, %0\n\t"
+		"movb %%al, %1\n\t"
+		"jnc noc\n\t"
+		"movb $1, %2\n\t"
+		"noc:\n\t"
+		"jno nof\n\t"
+		"movb $1, %3\n\t"
+		"nof:\n\t"
+		: "=m" (d), "=m" (e), "=m" (carry), "=m" (of)
+		: "m" (a), "m" (b), "m" (c)
+	);
+	
+	printf("a: %d, b: %d, c: %d\n", a, b, c);
+	printf("d: %d, e: %d\n", d, e);
+	printf("carry: %d, of: %d\n", carry, of);
+}
+
 int main ()
 {
-	test_AAA();
+	test_SBB();
 	return 0;
 }

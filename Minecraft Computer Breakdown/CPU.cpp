@@ -1,4 +1,4 @@
-
+﻿
 #include <iostream>
 
 #include "ALU.hpp"
@@ -816,7 +816,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
         //  - 7: keep the sign (only for right shifts)
 		U8 count = data.op3 & 0b11111;
 		bit use_imm = data.op3 & (1 << 5);
-		bit rot_left = data.op3 & (1 << 6);
+		bit shift_left = data.op3 & (1 << 6);
         bit keep_sign = data.op3 & (1 << 7);
 
         if (!use_imm) {
@@ -834,7 +834,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 
         bit carry = 0;
         bit OF = 0;
-        if (rot_left) {
+        if (shift_left) {
             ret = ALU::shift_left(data.op1, carry, count, data.op1_size);
             OF = bool(ret & (1 << last_bit_pos)) != carry;
         }
@@ -868,7 +868,193 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
     }
     case Opcodes::SBB:
 	{
-        // TODO
+		U32 op2 = ALU::sign_extend(data.op2, data.op2_size);
+		
+		bit carry = bool(flags & Flags::CF);
+		op2 = ALU::add(op2, 0, carry);
+		ret = ALU::sub(data.op1, op2, carry);
+		
+		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+		break;
+	}
+	case Opcodes::SETcc:
+	{
+		U8 condition = data.imm;
+		switch (condition)
+		{
+		case 0b0000: // Above | Not below or equal
+			// ZF = 0 && CF = 0
+			ret = !bool(flags & (Flags::ZF | Flags::CF));
+			break;
+			
+		case 0b0001: // Above or equal | Not below | Not carry
+			// CF = 0
+			ret = !bool(flags & Flags::CF);
+			break;
+			
+		case 0b0010: // Below | Carry | Not above or equal
+			// CF = 1
+			ret = bool(flags & Flags::CF);
+			break;
+			
+		case 0b0011: // Below or equal | Not above
+			// ZF = 1 || CF = 1
+			ret = bool(flags & Flags::ZF) | bool(flags & Flags::CF);
+			break;
+			
+		case 0b0100: // Equal | Zero
+			// ZF = 1
+			ret = bool(flags & Flags::ZF);
+			break;
+			
+		case 0b0101: // Greater | Not less or equal
+			// ZF = 0 || (SF == OF)
+			ret = !bool(flags & Flags::ZF) | !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			break;
+			
+		case 0b0110: // Greater or Equal | Not less
+			// SF == OF
+			ret = !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			break;
+			
+		case 0b0111: // Less | Not greater or equal
+			// SF != OF
+			ret = bool(flags & Flags::SF) ^ bool(flags & Flags::OF);
+			break;
+			
+		case 0b1000: // Less or equal | Not greater
+			// ZF = 1 && SF != OF
+			ret = bool(flags & Flags::ZF) & (bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			break;
+			
+		case 0b1001: // Not equal | Not zero
+			// ZF = 0
+			ret = !bool(flags & Flags::ZF);
+			break;
+			
+		case 0b1010: // Not overflow
+			// OF = 0
+			ret = !bool(flags & Flags::OF);
+			break;
+		
+		case 0b1011: // Not parity | Parity odd
+			// PF = 0
+			ret = !bool(flags & Flags::PF);
+			break;
+			
+		case 0b1100: // Not sign
+			// SF = 0
+			ret = !bool(flags & Flags::SF);
+			break;
+			
+		case 0b1101: // Overflow
+			// OF = 1
+			ret = bool(flags & Flags::OF);
+			break;
+		
+		case 0b1110: // Parity | Parity even
+			// PF = 1
+			ret = bool(flags & Flags::PF);
+			break;
+			
+		case 0b1111: // Sign
+			// SF = 1
+			ret = bool(flags & Flags::SF);
+			break;
+		}
+		break;
+	}
+	case Opcodes::SHD:
+	{
+		U8 count = data.op3 & 0b11111;
+		bit shift_left = data.op3 & (1 << 5);
+		
+		bit carry = 0;
+		if (shift_left) {
+			U64 merged = U64(data.op1) << 32;
+			if (data.op2_size == OpSize::DW) {
+				merged |= data.op2;
+			}
+			else { // W operand
+				merged |= U16(data.op2) << 16;
+			}
+			merged = ALU::shift_left(merged, carry, count);
+			ret = U32(merged >> 32);
+		}
+		else {
+			U64 merged = U64(data.op2) << 32;
+			if (data.op1_size == OpSize::DW) {
+				merged |= data.op1;
+			}
+			else { // W operand
+				merged |= U16(data.op1) << 16;
+			}
+			merged = ALU::shift_right(merged, carry, count);
+			if (data.op1_size == OpSize::DW) {
+				ret = U32(merged);
+			}
+			else {
+				ret = U32(merged >> 16);
+			}
+		}
+		
+		if (carry) {
+            flags |= Flags::CF;
+        }
+        else {
+            flags &= ~Flags::CF;
+        }
+
+        update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
+		update_parity_flag(flags, ret);
+		break;
+	}
+	case Opcodes::STC:
+	{
+		flags |= Flags::CF;
+		break;
+	}
+	case Opcodes::STD:
+	{
+		flags |= Flags::DF;
+		break;
+	}
+	case Opcodes::STI:
+	{
+		// TODO: permission checks
+		flags |= Flags::IF;
+		break;
+	}
+	case Opcodes::SUB:
+	{
+		U32 op2 = ALU::sign_extend(data.op2, data.op2_size);
+		
+		bit carry = 0;
+		ret = ALU::sub(data.op1, op2, carry);
+		
+		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+		break;
+	}
+	case Opcodes::TEST:
+	{
+		U32 result = data.op1 & data.op2;
+		
+		flags &= ~(Flags::OF | Flags::CF);
+		update_parity_flag(flags, result);
+		update_sign_flag(flags, result, data.op1_size);
+		update_zero_flag(flags, result);
+		break;
+	}
+	case Opcodes::XCHG:
+	{
+		ret = data.op2;
+		ret2 = data.op1;
+		break;
+	}
+	case Opcodes::XLAT:
+	{
+		ALU::add_no_carry(data.op1, data.op2);
 		break;
 	}
 	/*
