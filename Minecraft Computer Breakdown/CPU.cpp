@@ -1004,7 +1004,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		if (carry) {
             flags |= Flags::CF;
         }
-        else {
+		else {
             flags &= ~Flags::CF;
         }
 
@@ -1221,7 +1221,51 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
     }
     case Opcodes::OUT:
     {
-        // TODO
+        U8 CPL = 0; // TODO : get CPL from the segment descriptor
+        if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
+            // We are in protected mode, with CPL > IOPL or in virtual mode
+            // TODO : default IO permission bit value: 0
+            if (0) {
+                throw ProcessorExeception("#GP", registers.EIP, 0);
+            }
+        }
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        write_io(data.op1, data.op2, size);
+        break;
+    }
+    case Opcodes::POP:
+    {
+        ret = pop(data.op1_size);
+        // TODO : writing to segment registers is possible here, checks should be made
+        break;
+    }
+    case Opcodes::POPA:
+    {
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        U32 val = pop(size);
+        if (ALU::compare_equal(index, U8(4))) {
+            // skip SP/ESP
+        }
+        else {
+            U8 reversed_index = ALU::sub_no_carry(U8(7), index);
+            registers.write(index, val, size);
+        }
+        
+        if (!ALU::compare_equal(index, U8(7))) {
+            // continue for each register
+            incr_index = 1;
+        }
+        break;
+    }
+    case Opcodes::POPF:
+    {
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        if (size == OpSize::DW) {
+            flags = pop(OpSize::DW);
+        }
+        else {
+            flags = (flags & 0xFF00) | pop(OpSize::W);
+        }
         break;
     }
 	}
