@@ -1,10 +1,12 @@
-﻿
+
 #include <iostream>
 #include <any>
 
 #include "ALU.hpp"
 #include "CPU.h"
+#include "exceptions.h"
 #include "instructions.h"
+#include "registers.h"
 
 #define NYI throw NotImplemented(opcode, registers.EIP)
 
@@ -1087,7 +1089,17 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
 	bit stop = false;
 	U8 state = 0, incr_state = 0;
 	U8 index = 0, incr_index = 0;
-	std::any storage; // in the circuit implementation, the storage is inside of each instruction circuit
+
+    // in the circuit implementation, each instruction circuit has its own storage
+    union Storage
+    {
+        struct Enter
+		{
+			U32 frame_ptr;
+			U32 ebp;
+		} enter;
+        
+    } storage;
 	
 	// Yes there is no indentation. What are you going to do about this huh?
 	do
@@ -1098,21 +1110,15 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
 	{
 	case Opcodes::ENTER:
 	{
-		struct EnterStorage
-		{
-			U32 frame_ptr;
-			U32 ebp;
-		};
-		
 		switch(state)
 		{
 		case 0:
 			// init
-			storage = std::make_any<EnterStorage>(
+			storage.enter = {
 				registers.read(Register::EBP), // ebp
 				registers.read(Register::ESP)  // frame_ptr
-			);
-			push(std::any_cast<EnterStorage>(storage).ebp);
+            };
+			push(storage.enter.ebp);
 			if (ALU::check_equal_zero(data.op2)) {
 				state = 2;
 			}
@@ -1123,34 +1129,103 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
 		
 		case 1:
 		{
-			EnterStorage _storage = std::any_cast<EnterStorage>(storage);
-			// build stack frame
 			if (ALU::compare_greater(index, U8(data.op2))) {
 				// stack frame is finished
-				push(std::any_cast<EnterStorage>(storage).frame_ptr);
+				push(storage.enter.frame_ptr);
 				state = 2;
 			}
 			else {
+                // build stack frame levels
 				OpSize size = get_size(currentInstruction->operand_size_override, 0);
 				if (size == OpSize::DW) {
-					_storage.ebp = ALU::sub_no_carry(_storage.ebp, 4);
+					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 4);
+                    push(ram.read(storage.enter.ebp, size), size);
 				}
 				else {
-					_storage.ebp = ALU::sub_no_carry(_storage.ebp, 2);
+					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 2);
+                    push(ram.read(storage.enter.ebp, size), size);
 				}
 				incr_index = 1;
 			}
-			storage = std::make_any<EnterStorage>(_storage);
 			break;
 		}
 		
 		case 2:
-			// end
+			// push frame-ptr, and make space for locals variables
+            registers.write(Register::EBP, storage.enter.frame_ptr);
+            registers.write(Register::ESP, data.op1);
 			break;
 		}
 		break;
 	}
+    case Opcodes::HLT:
+    {
+        // TODO ? (here is also a priviliege check to do)
+        break;
+    }
+    case Opcodes::IN:
+    {
+        U8 CPL = 0; // TODO : get CPL from the segment descriptor
+        if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
+            // We are in protected mode, with CPL > IOPL or in virtual mode
+            // TODO : default IO permission bit value: 0
+            if (0) {
+                throw ProcessorExeception("#GP", registers.EIP, 0);
+            }
+        }
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        ret = io.read(data.op2, size);        
+        break;
+    }
+    case Opcodes::LAR:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LGDT:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LGS:
+    {
+        // TODO : this is an instruction using the descriptor table (I think)
+        break;
+    }
+    case Opcodes::LLDT:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LMSW:
+    {
+        // TODO : permission check
+        // load only the first 6 bits
+        registers.control_registers[0] = (registers.control_registers[0] & 0b00111111) | data.op1;
+        break;
+    }
+    case Opcodes::LOCK:
+    {
+        // TODO : I don't know what to do here
+        break;
+    }
+    case Opcodes::LSL:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LTR:
+    {
+        // TODO : I don't know where the task register is
+        break;
+    }
+    case Opcodes::OUT:
+    {
+        // TODO
+        break;
+    }
 	}
+    // dedicated incrementation zone
 	if (incr_state) {
 		state = ALU::add_no_carry(state, U8(1));
 	}
@@ -1446,4 +1521,14 @@ void CPU::update_status_flags(U32& flags, U32 op1, U32 op2, U32 result, OpSize o
 	update_adjust_flag(flags, op1, op2);
 	update_parity_flag(flags, result);
 	update_carry_flag(flags, carry);
+}
+
+U32 CPU::read_io(U8 io_address, OpSize size)
+{
+    return io.read(io_address, size);
+}
+
+void CPU::write_io(U8 io_address, U32 value, OpSize size)
+{
+    io.write(io_address, value, size);
 }

@@ -447,6 +447,14 @@ namespace ALU
     }
 
 
+    template<typename N>
+    constexpr N shift_right_no_carry(N n, U8 count, OpSize size = OpSize::UNKNOWN, bit keep_sign = false)
+    {
+        bit carry = 0;
+        return ALU::shift_right(n, carry, count, size, keep_sign);
+    }
+
+
 	template<typename N>
 	constexpr U8 get_first_set_bit_index(N n, bit& isZero)
 	{

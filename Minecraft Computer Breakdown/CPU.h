@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <stack>
 
@@ -16,6 +16,7 @@ class CPU
 	Registers registers;
 	RAM<512> ram;
 	ROM<U32, 512> rom;
+    RAM<128> io;
 	
 	// stack, supposedly stored at the segment pointed by the SS register
 	std::stack<U32> stack; // TODO : replace this with a low level implementation
@@ -60,4 +61,7 @@ public:
 
 	void run();
 	void execute_instruction();
+
+    U32 read_io(U8 io_address, OpSize size);
+    void write_io(U8 io_address, U32 value, OpSize size);
 };
