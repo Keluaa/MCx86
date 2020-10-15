@@ -27,16 +27,14 @@ class CPU
 	
 	OpSize get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment = 0) const;
 	
-	void execute_non_arithmetic_instruction(const Inst* inst);
+	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	void execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	
 	U32 compute_address(bit _32bits_mode, OpSize opSize) const;
 	
-	void push_2(U16 value);
-	void push_4(U32 value);
+	void push(U32 value, OpSize size = OpSize::UNKNOWN);
 	
-	U16 pop_2();
-	U32 pop_4();
+	U32 pop(OpSize size = OpSize::UNKNOWN);
 
 	void update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize);
 	void update_sign_flag(U32& flags, U32 result, OpSize size);

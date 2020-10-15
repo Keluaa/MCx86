@@ -1,5 +1,6 @@
 ﻿
 #include <iostream>
+#include <any>
 
 #include "ALU.hpp"
 #include "CPU.h"
@@ -169,7 +170,7 @@ void CPU::execute_instruction()
 	U32 return_value_2 = 0;
 	if (inst->opcode & 0x80) { 
 		// non-trivial op
-		execute_non_arithmetic_instruction(inst);
+		execute_non_arithmetic_instruction(inst->opcode, data, flags, return_value, return_value_2);
 	} else { 
 		execute_arithmetic_instruction(inst->opcode, data, flags, return_value, return_value_2);
 	}
@@ -1055,51 +1056,108 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	case Opcodes::XLAT:
 	{
 		ALU::add_no_carry(data.op1, data.op2);
+		// TODO: fix
 		break;
 	}
-	/*
-	case Opcodes::DAA:
+	case Opcodes::XOR:
 	{
+		ret = ALU::xor_(data.op1, data.op2);
+		// TODO: flags
 		break;
 	}
-	*/
-
-	/*
-	case Opcodes::XCHG:
-	{
-		// op1 <-op2
-		switch (inst->op1_type) {
-		case Inst::R:
-			registers.write(inst->op1, op2_val);
-			break;
-		case Inst::M:
-			ram.write(inst->op1, op2_val);
-			break;
-		default:
-			throw BadInstruction("Wrong type of operand for XCHG", registers.EIP);
-		}
-		// op2 <- op1
-		switch (inst->op2_type) {
-		case Inst::R:
-			registers.write(inst->op2, op1_val);
-			break;
-		case Inst::M:
-			ram.write(inst->op2, op1_val);
-			break;
-		default:
-			throw BadInstruction("Wrong type of operand for XCHG", registers.EIP);
-		}
-		break;
-	}
-	*/
 	}
 	
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
 }
 
-void CPU::execute_non_arithmetic_instruction(const Inst* inst)
+void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
 {
-	// TODO
+	// All parameters are stored on pseudo registers which are read
+	// each loop. Their values cannot change during execution.
+	// When the instruction is completed, 'stop' is set and all
+	// data stored in the instruction should be reset.
+	// Each instruction should be fought as a state machine, with
+	// the index as the main parameter.
+	// This design allows for instructions which last serveral cycles,
+	// without the need to decode the instruction and transmit its
+	// parameters at each cycle. Memory, registers, stack, and special
+	// data storage can be read/written to several times in one
+	// instruction (but only once for each cycle).
+	
+	bit stop = false;
+	U8 state = 0, incr_state = 0;
+	U8 index = 0, incr_index = 0;
+	std::any storage; // in the circuit implementation, the storage is inside of each instruction circuit
+	
+	// Yes there is no indentation. What are you going to do about this huh?
+	do
+	{
+	incr_state = 0;
+	incr_index = 0;
+	switch (opcode & 0x7F) // consider only the first 7 bits of the opcode
+	{
+	case Opcodes::ENTER:
+	{
+		struct EnterStorage
+		{
+			U32 frame_ptr;
+			U32 ebp;
+		};
+		
+		switch(state)
+		{
+		case 0:
+			// init
+			storage = std::make_any<EnterStorage>(
+				registers.read(Register::EBP), // ebp
+				registers.read(Register::ESP)  // frame_ptr
+			);
+			push(std::any_cast<EnterStorage>(storage).ebp);
+			if (ALU::check_equal_zero(data.op2)) {
+				state = 2;
+			}
+			else {
+				state = 1;
+			}
+			break;
+		
+		case 1:
+		{
+			EnterStorage _storage = std::any_cast<EnterStorage>(storage);
+			// build stack frame
+			if (ALU::compare_greater(index, U8(data.op2))) {
+				// stack frame is finished
+				push(std::any_cast<EnterStorage>(storage).frame_ptr);
+				state = 2;
+			}
+			else {
+				OpSize size = get_size(currentInstruction->operand_size_override, 0);
+				if (size == OpSize::DW) {
+					_storage.ebp = ALU::sub_no_carry(_storage.ebp, 4);
+				}
+				else {
+					_storage.ebp = ALU::sub_no_carry(_storage.ebp, 2);
+				}
+				incr_index = 1;
+			}
+			storage = std::make_any<EnterStorage>(_storage);
+			break;
+		}
+		
+		case 2:
+			// end
+			break;
+		}
+		break;
+	}
+	}
+	if (incr_state) {
+		state = ALU::add_no_carry(state, U8(1));
+	}
+	if (incr_index) {
+		index = ALU::add_no_carry(index, U8(1));
+	}
+	} while (!stop);
 
 	/*
 	case Opcodes::CALL:
@@ -1230,45 +1288,58 @@ U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
 	return address;
 }
 
-void CPU::push_2(U16 value)
+void CPU::push(U32 value, OpSize size)
 {
-	// TODO : maybe replace ESP incrementations in stack ops with one increment output from the instruction processor
-	//  then we would have a dedicated adder next to the ESP register to perform one read, one add, one write.
 	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) -2);
+	
+	if (size == OpSize::UNKNOWN) {
+		size = get_size(currentInstruction->operand_size_override, 0);
+	}
+		
+	switch (size)
+	{
+	case OpSize::DW:
+		esp = ALU::add_no_carry(esp, (U32) -4);
+		break;
+		
+	case OpSize::W:
+		esp = ALU::add_no_carry(esp, (U32) -2);
+		break;
+		
+	default:
+		throw BadInstruction("Wrong operand size for push", registers.EIP);
+	}
+	
 	registers.write(Register::ESP, esp);
 	
 	stack.push(value);
 }
-
-void CPU::push_4(U32 value)
-{
-	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) -4);
-	registers.write(Register::ESP, esp);
 	
-	stack.push(value);
-}
-
-U16 CPU::pop_2()
-{
-	U16 val = stack.top();
-	stack.pop();
-	
-	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) 2);
-	registers.write(Register::ESP, esp);
-	
-	return val;
-}
-
-U32 CPU::pop_4()
+U32 CPU::pop(OpSize size)
 {
 	U32 val = stack.top();
 	stack.pop();
 	
 	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) 4);
+	
+	if (size == OpSize::UNKNOWN) {
+		size = get_size(currentInstruction->operand_size_override, 0);
+	}
+		
+	switch (size)
+	{
+	case OpSize::DW:
+		esp = ALU::add_no_carry(esp, (U32) 4);
+		break;
+		
+	case OpSize::W:
+		esp = ALU::add_no_carry(esp, (U32) 2);
+		break;
+		
+	default:
+		throw BadInstruction("Wrong operand size for pop", registers.EIP);
+	}
+	
 	registers.write(Register::ESP, esp);
 	
 	return val;
