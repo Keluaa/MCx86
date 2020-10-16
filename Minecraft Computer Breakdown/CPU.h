@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <stack>
 
@@ -28,8 +28,9 @@ class CPU
 	
 	OpSize get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment = 0) const;
 	
-	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	void execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
+	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
+	void execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	
 	U32 compute_address(bit _32bits_mode, OpSize opSize) const;
 	
