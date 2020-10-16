@@ -76,6 +76,10 @@ void CPU::execute_instruction()
 	if (inst->compute_address) {
 		data.address = compute_address(!inst->address_size_override, data.op1_size); // TODO: more things to do to have the size of the address
 	}
+
+	// TODO : fetch the segment's D bit, maybe also store it and update it when there is a CS change
+	OpSize operand_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+	OpSize address_size = get_size(inst->address_size_override, inst->address_byte_size_override);
 	
 	// TODO: use the computed address to read the operands. Also fix the operands size.
 	
@@ -84,15 +88,15 @@ void CPU::execute_instruction()
 	if (inst->read_op1) {
 		switch(inst->op1_type) {
 		case OpType::REG:
-			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op1_size = operand_size;
 			data.op1 = registers.read_index(inst->op1_register, data.op1_size);
 			break;
 		case OpType::MEM:
-			data.op1_size = get_size(inst->address_size_override, inst->address_byte_size_override);
+			data.op1_size = address_size;
 			data.op1 = ram.read(inst->address_value, data.op1_size);
 			break;
 		case OpType::IMM:
-			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op1_size = operand_size;
 			data.op1 = inst->immediate_value;
 			break;
 		case OpType::M_M:
@@ -103,7 +107,7 @@ void CPU::execute_instruction()
 			data.op1 = registers.read_segment(inst->op1_register);
 			break;
 		case OpType::MOFF:
-			data.op1_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op1_size = operand_size;
 			WARNING("moffs operands are not correctly addressed."); // TODO
 			data.op1 = ram.read(inst->address_value, data.op1_size);
 			break;
@@ -119,15 +123,15 @@ void CPU::execute_instruction()
 	if (inst->read_op2) {
 		switch(inst->op2_type) {
 		case OpType::REG:
-			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op2_size = operand_size;
 			data.op2 = registers.read_index(inst->op2_register, data.op2_size);
 			break;
 		case OpType::MEM:
-			data.op2_size = get_size(inst->address_size_override, inst->address_byte_size_override);
+			data.op2_size = address_size;
 			data.op2 = ram.read(inst->address_value, data.op2_size);
 			break;
 		case OpType::IMM:
-			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op2_size = operand_size;
 			data.op2 = inst->immediate_value;
 			break;
 		case OpType::M_M:
@@ -148,7 +152,7 @@ void CPU::execute_instruction()
 			data.op2 = registers.read_segment(inst->op2_register);
 			break;
 		case OpType::MOFF:
-			data.op2_size = get_size(inst->operand_size_override, inst->operand_byte_size_override);
+			data.op2_size = operand_size;
 			WARNING("moffs operands are not correctly addressed."); // TODO
 			data.op2 = ram.read(inst->address_value, data.op1_size);
 			break;
@@ -172,6 +176,10 @@ void CPU::execute_instruction()
 	U32 return_value_2 = 0;
 	if (inst->opcode & Opcodes::not_arithmethic) { 
 		// non-trivial op
+
+		data.op_size = operand_size;
+		data.ad_size = address_size;
+
 		if (inst->opcode & Opcodes::state_machine) {
 			// include all state machine, jump and string instructions
 			execute_non_arithmetic_instruction_with_state_machine(inst->opcode, data, flags, return_value, return_value_2);
@@ -1096,147 +1104,143 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
 	
 	switch (opcode) // we could consider only the first 7 bits of the opcode
 	{
-    case Opcodes::HLT:
-    {
-        // TODO ? (here is also a priviliege check to do)
-        break;
-    }
-    case Opcodes::IN:
-    {
-        U8 CPL = 0; // TODO : get CPL from the segment descriptor
-        if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
-            // We are in protected mode, with CPL > IOPL or in virtual mode
-            // TODO : default IO permission bit value: 0
-            if (0) {
-                throw ProcessorExeception("#GP", registers.EIP, 0);
-            }
-        }
-        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
-        ret = io.read(data.op2, size);        
-        break;
-    }
-    case Opcodes::LAR:
-    {
-        // TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::LGDT:
-    {
-        // TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::LGS:
-    {
-        // TODO : this is an instruction using the descriptor table (I think)
-        break;
-    }
-    case Opcodes::LLDT:
-    {
-        // TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::LMSW:
-    {
-        // TODO : permission check
-        // load only the first 6 bits
-        registers.control_registers[0] = (registers.control_registers[0] & 0b00111111) | data.op1;
-        break;
-    }
-    case Opcodes::LOCK:
-    {
-        // TODO : I don't know what to do here
-        break;
-    }
-    case Opcodes::LSL:
-    {
-        // TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::LTR:
-    {
-        // TODO : I don't know where the task register is
-        break;
-    }
-    case Opcodes::OUT:
-    {
-        U8 CPL = 0; // TODO : get CPL from the segment descriptor
-        if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
-            // We are in protected mode, with CPL > IOPL or in virtual mode
-            // TODO : default IO permission bit value: 0
-            if (0) {
-                throw ProcessorExeception("#GP", registers.EIP, 0);
-            }
-        }
-        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
-        write_io(data.op1, data.op2, size);
-        break;
-    }
-    case Opcodes::POP:
-    {
-        ret = pop(data.op1_size);
-        // TODO : writing to segment registers is possible here, checks should be made
-        break;
-    }
-    case Opcodes::POPF:
-    {
-        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
-        if (size == OpSize::DW) {
-            flags = pop(OpSize::DW);
-        }
-        else {
-            flags = (flags & 0xFF00) | pop(OpSize::W);
-        }
-        break;
-    }
-    case Opcodes::PUSH:
-    {
-    	push(data.op1, data.op1_size);
-        // TODO : reading from segment registers is possible here, checks should be made
-        break;
-    }
-    case Opcodes::PUSHF:
-    {
-    	OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
-        if (size == OpSize::DW) {
-        	push(flags, OpSize::DW);
-        }
-        else {
-        	push(flags & 0xFFFF, OpSize::W);
-        }
-    	break;
-    }
-    case Opcodes::SGDT:
-    {
-    	// TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::SLDT:
-    {
-    	// TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::SMSW:
-    {
-        // TODO : permission check
-        // get only the first 6 bits
-        ret = registers.control_registers[0] & 0b00111111;
-        break;
-    }
-    case Opcodes::STR:
-    {
-    	// TODO : I don't know where the task register is
-        break;
-    }
-    case Opcodes::VERR:
-    {
-    	// TODO : this is an instruction using the descriptor table
-        break;
-    }
-    case Opcodes::WAIT:
-    {
-    	// TODO ? (here is also a priviliege check to do, I think)
-        break;
-    }
+	case Opcodes::HLT:
+	{
+		// TODO ? (here is also a priviliege check to do)
+		break;
+	}
+	case Opcodes::IN:
+	{
+		U8 CPL = 0; // TODO : get CPL from the segment descriptor
+		if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
+			// We are in protected mode, with CPL > IOPL or in virtual mode
+			// TODO : default IO permission bit value: 0
+			if (0) {
+				INTERRUPT("#GP", 0);
+			}
+		}
+		ret = io.read(data.op2, data.op1_size);
+		break;
+	}
+	case Opcodes::LAR:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::LGDT:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::LGS:
+	{
+		// TODO : this is an instruction using the descriptor table (I think)
+		break;
+	}
+	case Opcodes::LLDT:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::LMSW:
+	{
+		// TODO : permission check
+		// load only the first 6 bits
+		registers.control_registers[0] = (registers.control_registers[0] & 0b00111111) | data.op1;
+		break;
+	}
+	case Opcodes::LOCK:
+	{
+		// TODO : I don't know what to do here
+		break;
+	}
+	case Opcodes::LSL:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::LTR:
+	{
+		// TODO : I don't know where the task register is
+		break;
+	}
+	case Opcodes::OUT:
+	{
+		U8 CPL = 0; // TODO : get CPL from the segment descriptor
+		if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
+			// We are in protected mode, with CPL > IOPL or in virtual mode
+			// TODO : default IO permission bit value: 0
+			if (0) {
+				throw ProcessorExeception("#GP", registers.EIP, 0);
+			}
+		}
+		write_io(data.op1, data.op2, data.op2_size);
+		break;
+	}
+	case Opcodes::POP:
+	{
+		ret = pop(data.op1_size);
+		// TODO : writing to segment registers is possible here, checks should be made
+		break;
+	}
+	case Opcodes::POPF:
+	{
+		if (data.op_size == OpSize::DW) {
+			flags = pop(OpSize::DW);
+		}
+		else {
+			flags = (flags & 0xFF00) | pop(OpSize::W);
+		}
+		break;
+	}
+	case Opcodes::PUSH:
+	{
+		push(data.op1, data.op1_size);
+		// TODO : reading from segment registers is possible here, checks should be made
+		break;
+	}
+	case Opcodes::PUSHF:
+	{
+		if (data.op_size == OpSize::DW) {
+			push(flags, OpSize::DW);
+		}
+		else {
+			push(flags & 0xFFFF, OpSize::W);
+		}
+		break;
+	}
+	case Opcodes::SGDT:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::SLDT:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::SMSW:
+	{
+		// TODO : permission check
+		// get only the first 6 bits
+		ret = registers.control_registers[0] & 0b00111111;
+		break;
+	}
+	case Opcodes::STR:
+	{
+		// TODO : I don't know where the task register is
+		break;
+	}
+	case Opcodes::VERR:
+	{
+		// TODO : this is an instruction using the descriptor table
+		break;
+	}
+	case Opcodes::WAIT:
+	{
+		// TODO ? (here is also a priviliege check to do, I think)
+		break;
+	}
 	}
 	
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
@@ -1256,15 +1260,15 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	// data storage can be read/written to several times in one
 	// instruction (but only once for each cycle).
 	
-	bit incr_EIP = 1;
+	bit incr_EIP = !(opcode & Opcodes::jmp) || (opcode & Opcodes::str); // do not increment EIP automatically for jump only instructions
 	bit repeat = false;
 	U8 state = 0, incr_state = 0;
 	U8 index = 0, incr_index = 0;
 
-    // in the circuit implementation, each instruction circuit has its own storage
-    union Storage
-    {
-        struct Enter
+	// in the circuit implementation, each instruction circuit has its own storage
+	union Storage
+	{
+		struct Enter
 		{
 			U32 frame_ptr;
 			U32 ebp;
@@ -1274,10 +1278,10 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		{
 			U32 esp;
 		} pusha;
-        
-    } storage;
-    
-    // Yes there is no indentation. What are you going to do about this huh?
+		
+	} storage;
+	
+	// Yes there is no indentation. What are you going to do about this huh?
 	do
 	{
 	incr_state = 0;
@@ -1290,9 +1294,9 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.")
 
 		U32 eip = registers.read_EIP();
-		push(eip);
-		eip = ALU::add_no_carry(eip, op1_val);
-		if (!is_32_bit_op_inst(inst->op1_size)) {
+		push(eip, OpSize::DW); // TODO : I think that this is a DW
+		eip = ALU::add_no_carry(eip, data.op1);
+		if (data.op1_size == OpSize::W) {
 			eip &= 0xFFFF; // keep only the first 2 bytes
 		}
 		registers.write_EIP(eip);
@@ -1306,7 +1310,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 			storage.enter = {
 				registers.read(Register::EBP), // ebp
 				registers.read(Register::ESP)  // frame_ptr
-            };
+			};
 			push(storage.enter.ebp);
 			if (ALU::check_equal_zero(data.op2)) {
 				state = 2;
@@ -1325,15 +1329,14 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 				state = 2;
 			}
 			else {
-                // build stack frame levels
-				OpSize size = get_size(currentInstruction->operand_size_override, 0);
-				if (size == OpSize::DW) {
+				// build stack frame levels
+				if (data.op_size == OpSize::DW) {
 					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 4);
-                    push(ram.read(storage.enter.ebp, size), size);
+					push(ram.read(storage.enter.ebp, data.op_size), data.op_size);
 				}
 				else {
 					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 2);
-                    push(ram.read(storage.enter.ebp, size), size);
+					push(ram.read(storage.enter.ebp, data.op_size), data.op_size);
 				}
 				incr_index = 1;
 			}
@@ -1343,56 +1346,161 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		
 		case 2:
 			// push frame-ptr, and make space for locals variables
-            registers.write(Register::EBP, storage.enter.frame_ptr);
-            registers.write(Register::ESP, data.op1);
+			registers.write(Register::EBP, storage.enter.frame_ptr);
+			registers.write(Register::ESP, data.op1);
 			break;
 		}
 		break;
 	}
-	case Opcodes::POPA:
-    {
-        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
-        U32 val = pop(size);
-        if (ALU::compare_equal(index, U8(4))) {
-            // skip SP/ESP
-        }
-        else {
-            U8 reversed_index = ALU::sub_no_carry(U8(7), index);
-            registers.write(index, val, size);
-        }
-        
-        if (!ALU::compare_equal(index, U8(7))) {
-            // continue for each register
-            incr_index = 1;
-            repeat = 1;
-        }
-        break;
-    }
-    case Opcodes::PUSHA:
-    {
-    	OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
-        if (ALU::check_equal_zero(index)) {
-        	storage.pusha.esp = registers.read_index(Register::ESP, size);
-        }
-        
-        if (ALU::compare_equal(index, U8(3))) {
-        	// handle SP/ESP
-        	push(storage.pusha.esp, size);
-        }
-        else {
-        	U32 val = registers.read_index(index, size);
-        	push(val, size);
-        }
-        
-        if (!ALU::compare_equal(index, U8(7))) {
-            // continue for each register
-            incr_index = 1;
-            repeat = 1;
-        }
-    	break;
-    }
+	case Opcodes::Jcc:
+	{
+		U8 condition = data.imm;
+		bit jump = 0;
+		switch (condition)
+		{
+		case 0b00000: // Above | Not below or equal
+			// ZF = 0 && CF = 0
+			jump = !bool(flags & (Flags::ZF | Flags::CF));
+			break;
+
+		case 0b00001: // Above or equal | Not below | Not carry
+			// CF = 0
+			jump = !bool(flags & Flags::CF);
+			break;
+
+		case 0b00010: // Below | Carry | Not above or equal
+			// CF = 1
+			jump = bool(flags & Flags::CF);
+			break;
+
+		case 0b00011: // Below or equal | Not above
+			// ZF = 1 || CF = 1
+			jump = bool(flags & Flags::ZF) | bool(flags & Flags::CF);
+			break;
+
+		case 0b00100: // Equal | Zero
+			// ZF = 1
+			jump = bool(flags & Flags::ZF);
+			break;
+
+		case 0b00101: // Greater | Not less or equal
+			// ZF = 0 || (SF == OF)
+			jump = !bool(flags & Flags::ZF) | !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			break;
+
+		case 0b00110: // Greater or Equal | Not less
+			// SF == OF
+			jump = !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			break;
+
+		case 0b00111: // Less | Not greater or equal
+			// SF != OF
+			jump = bool(flags & Flags::SF) ^ bool(flags & Flags::OF);
+			break;
+
+		case 0b01000: // Less or equal | Not greater
+			// ZF = 1 && SF != OF
+			jump = bool(flags & Flags::ZF) & (bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			break;
+
+		case 0b01001: // Not equal | Not zero
+			// ZF = 0
+			jump = !bool(flags & Flags::ZF);
+			break;
+
+		case 0b01010: // Not overflow
+			// OF = 0
+			jump = !bool(flags & Flags::OF);
+			break;
+
+		case 0b01011: // Not parity | Parity odd
+			// PF = 0
+			jump = !bool(flags & Flags::PF);
+			break;
+
+		case 0b01100: // Not sign
+			// SF = 0
+			jump = !bool(flags & Flags::SF);
+			break;
+
+		case 0b01101: // Overflow
+			// OF = 1
+			jump = bool(flags & Flags::OF);
+			break;
+
+		case 0b01110: // Parity | Parity even
+			// PF = 1
+			jump = bool(flags & Flags::PF);
+			break;
+
+		case 0b01111: // Sign
+			// SF = 1
+			jump = bool(flags & Flags::SF);
+			break;
+
+		case 0b10000: // CX register is zero
+			// CX = 0
+			jump = bool(ALU::check_equal_zero(U16(registers.read(Register::CX))));
+			break;
+
+		case 0b10001: // ECX register is zero
+			// ECX = 0
+			jump = bool(ALU::check_equal_zero(registers.read(Register::ECX)));
+			break;
+		}
+
+		if (jump) {
+			U32 new_eip = ALU::add_no_carry(registers.read_EIP(), data.op1);
+			if (data.op_size == OpSize::W) {
+				new_eip = U16(new_eip);
+			}
+			registers.write_EIP(new_eip);
+		}
+
+		break;
 	}
-    // dedicated incrementation zone
+	case Opcodes::POPA:
+	{
+		U32 val = pop(data.op_size);
+		if (ALU::compare_equal(index, U8(4))) {
+			// skip SP/ESP
+		}
+		else {
+			U8 reversed_index = ALU::sub_no_carry(U8(7), index);
+			registers.write(index, val, data.op_size);
+		}
+		
+		if (!ALU::compare_equal(index, U8(7))) {
+			// continue for each register
+			incr_index = 1;
+			repeat = 1;
+		}
+		break;
+	}
+	case Opcodes::PUSHA:
+	{
+		if (ALU::check_equal_zero(index)) {
+			storage.pusha.esp = registers.read_index(Register::ESP, data.op_size);
+		}
+		
+		if (ALU::compare_equal(index, U8(3))) {
+			// handle SP/ESP
+			push(storage.pusha.esp, data.op_size);
+		}
+		else {
+			U32 val = registers.read_index(index, data.op_size);
+			push(val, data.op_size);
+		}
+		
+		if (!ALU::compare_equal(index, U8(7))) {
+			// continue for each register
+			incr_index = 1;
+			repeat = 1;
+		}
+		break;
+	}
+	}
+	// dedicated incrementation zone
 	if (incr_state) {
 		state = ALU::add_no_carry(state, U8(1));
 	}
@@ -1404,25 +1512,6 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	if (incr_EIP) {
 		registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
 	}
-	
-	/*
-	case Opcodes::JO:
-	{
-		if (registers.flag_read_OF()) {
-			registers.EIP = op1_val;
-			return; // skip EIP increment
-		}
-		break;
-	}
-	case Opcodes::JNO:
-	{
-		if (!registers.flag_read_OF()) {
-			registers.EIP = op1_val;
-			return; // skip EIP increment
-		}
-		break;
-	}
-	*/
 }
 
 U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const

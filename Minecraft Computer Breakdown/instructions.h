@@ -38,6 +38,10 @@ struct InstData
 	OpSize op2_size:2;
 	OpSize op3_size:2;
 	U8:2; // padding
+
+	// Used only for non-arithmetic instructions
+	OpSize op_size:2;
+	OpSize ad_size:2;
 };
 
 
@@ -119,7 +123,7 @@ struct Inst
 	U32 immediate_value;
 	
 	Inst(U8 opcode, U32 flags, U32 address_value = 0, U32 immediate_value = 0);
-		
+	
 	InstData getInstData() const;
 };
 
