@@ -311,7 +311,7 @@ namespace ALU
 		for (int i = 0; i < count; i++) {
 			tmpc = bool(n & mask);
 			n <<= 1;
-			n |= tmp;
+			n |= N(tmp);
 			tmp = tmpc;
 		}
 		
@@ -372,7 +372,7 @@ namespace ALU
 		for (int i = 0; i < count; i++) {
 			tmp = bool(n & mask);
 			n <<= 1;
-			n |= tmp;
+			n |= N(tmp);
 		}
 		
 		carry = tmp;
@@ -424,7 +424,7 @@ namespace ALU
 		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
-        typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
+        typename std::make_unsigned<N>::type mask = U64(1) << last_bit_pos; // cast to max precision to prevent any problems
 
         bit tmp = 0;
         for (int i = 0; i < count; i++) {
@@ -454,7 +454,7 @@ namespace ALU
             case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
             default: last_bit_pos = sizeof(N)   * 8 - 1; break;
             }
-            sign = n & (1 << last_bit_pos);
+            sign = n & (U64(1) << last_bit_pos); // cast to max precision to prevent any problems
         }
 		
         bit tmp = 0;

@@ -168,59 +168,54 @@ namespace Opcodes
 	constexpr U8 IDIV    = 27 | arithmethic;
 	constexpr U8 IMUL    = 28 | arithmethic;
 	constexpr U8 INC     = 29 | arithmethic;
-	constexpr U8 LAHF    = 54 | arithmethic; // TODO : fix numerotation
-	constexpr U8 LEA     = 30 | arithmethic;
-	constexpr U8 MOV     = 31 | arithmethic;
-	constexpr U8 MOVSX   = 32 | arithmethic;
-	constexpr U8 MOVZX   = 33 | arithmethic;
-	constexpr U8 MUL     = 34 | arithmethic;
-	constexpr U8 NEG     = 35 | arithmethic;
-	constexpr U8 NOP     = 36 | arithmethic;
-	constexpr U8 NOT     = 37 | arithmethic;
-	constexpr U8 OR      = 38 | arithmethic;
-	constexpr U8 ROT     = 39 | arithmethic; // heavily modified to fit in one instruction
-	constexpr U8 SAHF    = 56 | arithmethic; // TODO : fix numerotation
-    constexpr U8 SHFT    = 40 | arithmethic; // heavily modified to fit in one instruction
-	constexpr U8 SBB     = 41 | arithmethic;
-	constexpr U8 SETcc   = 42 | arithmethic; // heavily modified to fit in one instruction
-	constexpr U8 SHD     = 43 | arithmethic; // merged SHLD and SHRD
-	constexpr U8 STC     = 45 | arithmethic;
-	constexpr U8 STD     = 46 | arithmethic;
-	constexpr U8 STI     = 47 | arithmethic;
-	constexpr U8 SUB     = 48 | arithmethic;
-	constexpr U8 TEST    = 49 | arithmethic;
-	constexpr U8 XCHG    = 50 | arithmethic;
-	constexpr U8 XLAT    = 51 | arithmethic;
-	constexpr U8 XOR     = 52 | arithmethic;
+	constexpr U8 LAHF    = 30 | arithmethic;
+	constexpr U8 LEA     = 31 | arithmethic;
+	constexpr U8 MOV     = 32 | arithmethic;
+	constexpr U8 MOVSX   = 33 | arithmethic;
+	constexpr U8 MOVZX   = 34 | arithmethic;
+	constexpr U8 MUL     = 35 | arithmethic;
+	constexpr U8 NEG     = 36 | arithmethic;
+	constexpr U8 NOP     = 37 | arithmethic;
+	constexpr U8 NOT     = 38 | arithmethic;
+	constexpr U8 OR      = 39 | arithmethic;
+	constexpr U8 ROT     = 40 | arithmethic; // heavily modified to fit in one instruction
+	constexpr U8 SAHF    = 41 | arithmethic;
+    constexpr U8 SHFT    = 42 | arithmethic; // heavily modified to fit in one instruction
+	constexpr U8 SBB     = 43 | arithmethic;
+	constexpr U8 SETcc   = 44 | arithmethic; // heavily modified to fit in one instruction
+	constexpr U8 SHD     = 45 | arithmethic; // merged SHLD and SHRD
+	constexpr U8 STC     = 46 | arithmethic;
+	constexpr U8 STD     = 47 | arithmethic;
+	constexpr U8 STI     = 48 | arithmethic;
+	constexpr U8 SUB     = 49 | arithmethic;
+	constexpr U8 TEST    = 50 | arithmethic;
+	constexpr U8 XCHG    = 51 | arithmethic;
+	constexpr U8 XLAT    = 52 | arithmethic;
+	constexpr U8 XOR     = 53 | arithmethic;
 	
 	// Non arithmetic instructions
-	
-	// todo : separate state_machine instructions
-	constexpr U8 ENTER   =  0 | not_arithmethic | state_machine;
-	constexpr U8 HLT     =  1 | not_arithmethic;
-	constexpr U8 IN      =  2 | not_arithmethic;
-	constexpr U8 LAR     =  4 | not_arithmethic; // todo : fix numerotation
-	constexpr U8 LGDT    =  5 | not_arithmethic;
-	constexpr U8 LGS     =  6 | not_arithmethic;
-	constexpr U8 LLDT    =  7 | not_arithmethic;
-	constexpr U8 LMSW    =  8 | not_arithmethic;
-	constexpr U8 LOCK    =  9 | not_arithmethic;
-	constexpr U8 LSL     = 10 | not_arithmethic;
-	constexpr U8 LTR     = 11 | not_arithmethic;
-	constexpr U8 OUT     = 12 | not_arithmethic;
-	constexpr U8 POP     = 13 | not_arithmethic;
-	constexpr U8 POPA    = 14 | not_arithmethic | state_machine;
-	constexpr U8 POPF    = 15 | not_arithmethic;
-	constexpr U8 PUSH    = 16 | not_arithmethic;
-	constexpr U8 PUSHA   = 17 | not_arithmethic | state_machine;
-	constexpr U8 PUSHF   = 18 | not_arithmethic;
-	
-	constexpr U8 SGDT    = 20 | not_arithmethic;
-	constexpr U8 SLDT    = 25 | not_arithmethic; // todo : fix numerotation
-	constexpr U8 SMSW    = 21 | not_arithmethic;
-	constexpr U8 STR     = 22 | not_arithmethic;
-	constexpr U8 VERR    = 23 | not_arithmethic;
-	constexpr U8 WAIT    = 24 | not_arithmethic;
+		
+	constexpr U8 HLT     =  0 | not_arithmethic;
+	constexpr U8 IN      =  1 | not_arithmethic;
+	constexpr U8 LAR     =  2 | not_arithmethic;
+	constexpr U8 LGDT    =  3 | not_arithmethic;
+	constexpr U8 LGS     =  4 | not_arithmethic;
+	constexpr U8 LLDT    =  5 | not_arithmethic;
+	constexpr U8 LMSW    =  6 | not_arithmethic;
+	constexpr U8 LOCK    =  7 | not_arithmethic;
+	constexpr U8 LSL     =  8 | not_arithmethic;
+	constexpr U8 LTR     =  9 | not_arithmethic;
+	constexpr U8 OUT     = 10 | not_arithmethic;
+	constexpr U8 POP     = 11 | not_arithmethic;
+	constexpr U8 POPF    = 12 | not_arithmethic;
+	constexpr U8 PUSH    = 13 | not_arithmethic;
+	constexpr U8 PUSHF   = 14 | not_arithmethic;
+	constexpr U8 SGDT    = 15 | not_arithmethic;
+	constexpr U8 SLDT    = 16 | not_arithmethic;
+	constexpr U8 SMSW    = 17 | not_arithmethic;
+	constexpr U8 STR     = 18 | not_arithmethic;
+	constexpr U8 VERR    = 19 | not_arithmethic;
+	constexpr U8 WAIT    = 20 | not_arithmethic;
 
 	// Non arithmetic instructions on strings
 	
@@ -237,16 +232,22 @@ namespace Opcodes
 	constexpr U8 CALL    =  0 | not_arithmethic | jmp;
 	constexpr U8 INT     =  1 | not_arithmethic | jmp;
 	constexpr U8 IRET    =  2 | not_arithmethic | jmp;
-	constexpr U8 Jcc     =  3 | not_arithmethic | jmp;
+	constexpr U8 Jcc     =  3 | not_arithmethic | jmp; // heavily modified to fit in one instruction
 	constexpr U8 JMP     =  4 | not_arithmethic | jmp;
 	constexpr U8 LEAVE   =  5 | not_arithmethic | jmp;
 	constexpr U8 LOOP    =  6 | not_arithmethic | jmp;
 	constexpr U8 REP     =  7 | not_arithmethic | jmp;
 	constexpr U8 RET     =  8 | not_arithmethic | jmp;
+
+	// State Machine instructions
+
+	constexpr U8 ENTER   =  0 | not_arithmethic | state_machine;
+	constexpr U8 POPA    =  1 | not_arithmethic | state_machine;
+	constexpr U8 PUSHA   =  2 | not_arithmethic | state_machine;
 	
 	// Custom instructions
 	
 	// TODO : check usefulness
-	constexpr U8 IMULX   = 53 | arithmethic; // used after IMUL or MUL on 32 bit operands, to extend the result to 64 bit
+	constexpr U8 IMULX   = 54 | arithmethic; // used after IMUL or MUL on 32 bit operands, to extend the result to 64 bit
 	constexpr U8 MULX    = 55 | arithmethic; // used to perform 64 bit multiplication
 };
