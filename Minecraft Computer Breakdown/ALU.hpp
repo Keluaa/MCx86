@@ -111,6 +111,28 @@ namespace ALU
 	}
 
 
+    template<typename A, typename B>
+	constexpr bit compare_equal(A a, B b, bool _internal_call = false)
+	{
+        static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "compare_equal operands must be of integral type");
+		static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_equal' must have at least the same bit length than the second");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+        // we can parse the bits in either direction, but it is more likely to have a difference in the first bits in general.
+        typename std::make_unsigned<A>::type mask = 1;
+
+        for (int i = 0; i < sizeof(A) * 8; i++) {
+            if (((a & mask) ^ (b & mask)) == 1) {
+                return false;
+            }
+            mask <<= 1;
+        }
+
+        return true;
+    }
+
+
 	/*
 		Returns a >= b, with an additional flag if a == b.
 	*/
@@ -444,6 +466,14 @@ namespace ALU
         n |= sign; // the sign is ORed into the result, to match the behaviour of SAR
         carry = tmp;
         return n;
+    }
+
+
+    template<typename N>
+    constexpr N shift_right_no_carry(N n, U8 count, OpSize size = OpSize::UNKNOWN, bit keep_sign = false)
+    {
+        bit carry = 0;
+        return ALU::shift_right(n, carry, count, size, keep_sign);
     }
 
 

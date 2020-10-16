@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <memory>
 
@@ -127,7 +127,9 @@ struct Registers
 	*/
 
 	U32 EFLAGS = 0b10; // bit 1 is always 1
-		
+
+    U8 read_flag_IOPL() const { return (EFLAGS & (Flags::IOPL)) >> 12; }
+	
 	/*
 		Control Registers
 	*/

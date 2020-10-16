@@ -128,6 +128,7 @@ namespace Opcodes
 {
 	constexpr U8 arithmethic = 0;
 	constexpr U8 not_arithmethic = 1 << 7;
+	constexpr U8 state_machine = 0b11 << 5;
 	constexpr U8 jmp = 1 << 6;
 	constexpr U8 str = 1 << 5;
 	
@@ -179,7 +180,6 @@ namespace Opcodes
 	constexpr U8 SBB     = 41 | arithmethic;
 	constexpr U8 SETcc   = 42 | arithmethic; // heavily modified to fit in one instruction
 	constexpr U8 SHD     = 43 | arithmethic; // merged SHLD and SHRD
-	constexpr U8 SLDT    = 44 | arithmethic;
 	constexpr U8 STC     = 45 | arithmethic;
 	constexpr U8 STD     = 46 | arithmethic;
 	constexpr U8 STI     = 47 | arithmethic;
@@ -191,7 +191,8 @@ namespace Opcodes
 	
 	// Non arithmetic instructions
 	
-	constexpr U8 ENTER   =  0 | not_arithmethic;
+	// todo : separate state_machine instructions
+	constexpr U8 ENTER   =  0 | not_arithmethic | state_machine;
 	constexpr U8 HLT     =  1 | not_arithmethic;
 	constexpr U8 IN      =  2 | not_arithmethic;
 	constexpr U8 LAR     =  4 | not_arithmethic; // todo : fix numerotation
@@ -204,13 +205,14 @@ namespace Opcodes
 	constexpr U8 LTR     = 11 | not_arithmethic;
 	constexpr U8 OUT     = 12 | not_arithmethic;
 	constexpr U8 POP     = 13 | not_arithmethic;
-	constexpr U8 POPA    = 14 | not_arithmethic;
+	constexpr U8 POPA    = 14 | not_arithmethic | state_machine;
 	constexpr U8 POPF    = 15 | not_arithmethic;
 	constexpr U8 PUSH    = 16 | not_arithmethic;
-	constexpr U8 PUSHA   = 17 | not_arithmethic;
+	constexpr U8 PUSHA   = 17 | not_arithmethic | state_machine;
 	constexpr U8 PUSHF   = 18 | not_arithmethic;
 	
 	constexpr U8 SGDT    = 20 | not_arithmethic;
+	constexpr U8 SLDT    = 25 | not_arithmethic; // todo : fix numerotation
 	constexpr U8 SMSW    = 21 | not_arithmethic;
 	constexpr U8 STR     = 22 | not_arithmethic;
 	constexpr U8 VERR    = 23 | not_arithmethic;
@@ -235,11 +237,12 @@ namespace Opcodes
 	constexpr U8 JMP     =  4 | not_arithmethic | jmp;
 	constexpr U8 LEAVE   =  5 | not_arithmethic | jmp;
 	constexpr U8 LOOP    =  6 | not_arithmethic | jmp;
-	constexpr U8 REP     =  7 | not_arithmethic | jmp | str;
+	constexpr U8 REP     =  7 | not_arithmethic | jmp;
 	constexpr U8 RET     =  8 | not_arithmethic | jmp;
 	
 	// Custom instructions
 	
+	// TODO : check usefulness
 	constexpr U8 IMULX   = 53 | arithmethic; // used after IMUL or MUL on 32 bit operands, to extend the result to 64 bit
 	constexpr U8 MULX    = 55 | arithmethic; // used to perform 64 bit multiplication
 };

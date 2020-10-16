@@ -1,9 +1,12 @@
 ﻿
 #include <iostream>
+#include <any>
 
 #include "ALU.hpp"
 #include "CPU.h"
+#include "exceptions.h"
 #include "instructions.h"
+#include "registers.h"
 
 #define NYI throw NotImplemented(opcode, registers.EIP)
 
@@ -167,10 +170,17 @@ void CPU::execute_instruction()
 	// execute the instruction
 	U32 return_value = 0;
 	U32 return_value_2 = 0;
-	if (inst->opcode & 0x80) { 
+	if (inst->opcode & Opcodes::not_arithmethic) { 
 		// non-trivial op
-		execute_non_arithmetic_instruction(inst);
-	} else { 
+		if (inst->opcode & Opcodes::state_machine) {
+			// include all state machine, jump and string instructions
+			execute_non_arithmetic_instruction_with_state_machine(inst->opcode, data, flags, return_value, return_value_2);
+		}
+		else {
+			execute_non_arithmetic_instruction(inst->opcode, data, flags, return_value, return_value_2);		
+		}
+	}
+	else {
 		execute_arithmetic_instruction(inst->opcode, data, flags, return_value, return_value_2);
 	}
 	
@@ -218,7 +228,7 @@ void CPU::execute_instruction()
 
 void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
 {
-	switch (opcode & 0x7F) // consider only the first 7 bits of the opcode
+	switch (opcode) // we could consider only the first 7 bits of the opcode
 	{
 	case Opcodes::AAA:
 	{
@@ -1008,7 +1018,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		if (carry) {
             flags |= Flags::CF;
         }
-        else {
+		else {
             flags &= ~Flags::CF;
         }
 
@@ -1071,11 +1081,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	case Opcodes::XOR:
 	{
 		ret = ALU::xor_(data.op1, data.op2);
-
-		flags &= ~(Flags::OF | Flags::CF);
-		update_parity_flag(flags, ret);
-		update_sign_flag(flags, ret, data.op1_size);
-		update_zero_flag(flags, ret);
+		// TODO: flags
 		break;
 	}
 	}
@@ -1083,24 +1089,323 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
 }
 
-void CPU::execute_non_arithmetic_instruction(const Inst* inst)
+void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
 {
-	// TODO
+	// those instructions are separated from thee rest as they a either
+	// more complex, or access special data.
+	
+	switch (opcode) // we could consider only the first 7 bits of the opcode
+	{
+    case Opcodes::HLT:
+    {
+        // TODO ? (here is also a priviliege check to do)
+        break;
+    }
+    case Opcodes::IN:
+    {
+        U8 CPL = 0; // TODO : get CPL from the segment descriptor
+        if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
+            // We are in protected mode, with CPL > IOPL or in virtual mode
+            // TODO : default IO permission bit value: 0
+            if (0) {
+                throw ProcessorExeception("#GP", registers.EIP, 0);
+            }
+        }
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        ret = io.read(data.op2, size);        
+        break;
+    }
+    case Opcodes::LAR:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LGDT:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LGS:
+    {
+        // TODO : this is an instruction using the descriptor table (I think)
+        break;
+    }
+    case Opcodes::LLDT:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LMSW:
+    {
+        // TODO : permission check
+        // load only the first 6 bits
+        registers.control_registers[0] = (registers.control_registers[0] & 0b00111111) | data.op1;
+        break;
+    }
+    case Opcodes::LOCK:
+    {
+        // TODO : I don't know what to do here
+        break;
+    }
+    case Opcodes::LSL:
+    {
+        // TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::LTR:
+    {
+        // TODO : I don't know where the task register is
+        break;
+    }
+    case Opcodes::OUT:
+    {
+        U8 CPL = 0; // TODO : get CPL from the segment descriptor
+        if (registers.control_flag_read_PE() && (ALU::compare_greater(CPL, U8((flags & Flags::IOPL) >> 12)) || (flags & Flags::VM))) {
+            // We are in protected mode, with CPL > IOPL or in virtual mode
+            // TODO : default IO permission bit value: 0
+            if (0) {
+                throw ProcessorExeception("#GP", registers.EIP, 0);
+            }
+        }
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        write_io(data.op1, data.op2, size);
+        break;
+    }
+    case Opcodes::POP:
+    {
+        ret = pop(data.op1_size);
+        // TODO : writing to segment registers is possible here, checks should be made
+        break;
+    }
+    case Opcodes::POPF:
+    {
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        if (size == OpSize::DW) {
+            flags = pop(OpSize::DW);
+        }
+        else {
+            flags = (flags & 0xFF00) | pop(OpSize::W);
+        }
+        break;
+    }
+    case Opcodes::PUSH:
+    {
+    	push(data.op1, data.op1_size);
+        // TODO : reading from segment registers is possible here, checks should be made
+        break;
+    }
+    case Opcodes::PUSHF:
+    {
+    	OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        if (size == OpSize::DW) {
+        	push(flags, OpSize::DW);
+        }
+        else {
+        	push(flags & 0xFFFF, OpSize::W);
+        }
+    	break;
+    }
+    case Opcodes::SGDT:
+    {
+    	// TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::SLDT:
+    {
+    	// TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::SMSW:
+    {
+        // TODO : permission check
+        // get only the first 6 bits
+        ret = registers.control_registers[0] & 0b00111111;
+        break;
+    }
+    case Opcodes::STR:
+    {
+    	// TODO : I don't know where the task register is
+        break;
+    }
+    case Opcodes::VERR:
+    {
+    	// TODO : this is an instruction using the descriptor table
+        break;
+    }
+    case Opcodes::WAIT:
+    {
+    	// TODO ? (here is also a priviliege check to do, I think)
+        break;
+    }
+	}
+	
+	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
+}
 
-	/*
+void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
+{
+	// All parameters are stored on pseudo registers which are read
+	// each loop. Their values cannot change during execution.
+	// When the instruction is completed, 'stop' is set and all
+	// data stored in the instruction should be reset.
+	// Each instruction should be fought as a state machine, with
+	// the index as the main parameter.
+	// This design allows for instructions which last serveral cycles,
+	// without the need to decode the instruction and transmit its
+	// parameters at each cycle. Memory, registers, stack, and special
+	// data storage can be read/written to several times in one
+	// instruction (but only once for each cycle).
+	
+	bit incr_EIP = 1;
+	bit repeat = false;
+	U8 state = 0, incr_state = 0;
+	U8 index = 0, incr_index = 0;
+
+    // in the circuit implementation, each instruction circuit has its own storage
+    union Storage
+    {
+        struct Enter
+		{
+			U32 frame_ptr;
+			U32 ebp;
+		} enter;
+		
+		struct PUSHA
+		{
+			U32 esp;
+		} pusha;
+        
+    } storage;
+    
+    // Yes there is no indentation. What are you going to do about this huh?
+	do
+	{
+	incr_state = 0;
+	incr_index = 0;
+	repeat = 0;
+	switch (opcode) // we could consider only the first 7 bits of the opcode
+	{
 	case Opcodes::CALL:
 	{
 		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.")
 
-			U32 eip = registers.read_EIP();
-		push_4(eip);
+		U32 eip = registers.read_EIP();
+		push(eip);
 		eip = ALU::add_no_carry(eip, op1_val);
 		if (!is_32_bit_op_inst(inst->op1_size)) {
 			eip &= 0xFFFF; // keep only the first 2 bytes
 		}
 		registers.write_EIP(eip);
-		return; // skip EIP increment
 	}
+	case Opcodes::ENTER:
+	{
+		switch(state)
+		{
+		case 0:
+			// init
+			storage.enter = {
+				registers.read(Register::EBP), // ebp
+				registers.read(Register::ESP)  // frame_ptr
+            };
+			push(storage.enter.ebp);
+			if (ALU::check_equal_zero(data.op2)) {
+				state = 2;
+			}
+			else {
+				state = 1;
+			}
+			repeat = 1;
+			break;
+		
+		case 1:
+		{
+			if (ALU::compare_greater(index, U8(data.op2))) {
+				// stack frame is finished
+				push(storage.enter.frame_ptr);
+				state = 2;
+			}
+			else {
+                // build stack frame levels
+				OpSize size = get_size(currentInstruction->operand_size_override, 0);
+				if (size == OpSize::DW) {
+					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 4);
+                    push(ram.read(storage.enter.ebp, size), size);
+				}
+				else {
+					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 2);
+                    push(ram.read(storage.enter.ebp, size), size);
+				}
+				incr_index = 1;
+			}
+			repeat = 1;
+			break;
+		}
+		
+		case 2:
+			// push frame-ptr, and make space for locals variables
+            registers.write(Register::EBP, storage.enter.frame_ptr);
+            registers.write(Register::ESP, data.op1);
+			break;
+		}
+		break;
+	}
+	case Opcodes::POPA:
+    {
+        OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        U32 val = pop(size);
+        if (ALU::compare_equal(index, U8(4))) {
+            // skip SP/ESP
+        }
+        else {
+            U8 reversed_index = ALU::sub_no_carry(U8(7), index);
+            registers.write(index, val, size);
+        }
+        
+        if (!ALU::compare_equal(index, U8(7))) {
+            // continue for each register
+            incr_index = 1;
+            repeat = 1;
+        }
+        break;
+    }
+    case Opcodes::PUSHA:
+    {
+    	OpSize size = get_size(currentInstruction->operand_size_override, currentInstruction->operand_byte_size_override);
+        if (ALU::check_equal_zero(index)) {
+        	storage.pusha.esp = registers.read_index(Register::ESP, size);
+        }
+        
+        if (ALU::compare_equal(index, U8(3))) {
+        	// handle SP/ESP
+        	push(storage.pusha.esp, size);
+        }
+        else {
+        	U32 val = registers.read_index(index, size);
+        	push(val, size);
+        }
+        
+        if (!ALU::compare_equal(index, U8(7))) {
+            // continue for each register
+            incr_index = 1;
+            repeat = 1;
+        }
+    	break;
+    }
+	}
+    // dedicated incrementation zone
+	if (incr_state) {
+		state = ALU::add_no_carry(state, U8(1));
+	}
+	if (incr_index) {
+		index = ALU::add_no_carry(index, U8(1));
+	}
+	} while (repeat);
+	
+	if (incr_EIP) {
+		registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
+	}
+	
+	/*
 	case Opcodes::JO:
 	{
 		if (registers.flag_read_OF()) {
@@ -1216,45 +1521,58 @@ U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
 	return address;
 }
 
-void CPU::push_2(U16 value)
+void CPU::push(U32 value, OpSize size)
 {
-	// TODO : maybe replace ESP incrementations in stack ops with one increment output from the instruction processor
-	//  then we would have a dedicated adder next to the ESP register to perform one read, one add, one write.
 	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) -2);
+	
+	if (size == OpSize::UNKNOWN) {
+		size = get_size(currentInstruction->operand_size_override, 0);
+	}
+		
+	switch (size)
+	{
+	case OpSize::DW:
+		esp = ALU::add_no_carry(esp, (U32) -4);
+		break;
+		
+	case OpSize::W:
+		esp = ALU::add_no_carry(esp, (U32) -2);
+		break;
+		
+	default:
+		throw BadInstruction("Wrong operand size for push", registers.EIP);
+	}
+	
 	registers.write(Register::ESP, esp);
 	
 	stack.push(value);
 }
-
-void CPU::push_4(U32 value)
-{
-	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) -4);
-	registers.write(Register::ESP, esp);
 	
-	stack.push(value);
-}
-
-U16 CPU::pop_2()
-{
-	U16 val = stack.top();
-	stack.pop();
-	
-	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) 2);
-	registers.write(Register::ESP, esp);
-	
-	return val;
-}
-
-U32 CPU::pop_4()
+U32 CPU::pop(OpSize size)
 {
 	U32 val = stack.top();
 	stack.pop();
 	
 	U32 esp = registers.read(Register::ESP);
-	esp = ALU::add_no_carry(esp, (U32) 4);
+	
+	if (size == OpSize::UNKNOWN) {
+		size = get_size(currentInstruction->operand_size_override, 0);
+	}
+		
+	switch (size)
+	{
+	case OpSize::DW:
+		esp = ALU::add_no_carry(esp, (U32) 4);
+		break;
+		
+	case OpSize::W:
+		esp = ALU::add_no_carry(esp, (U32) 2);
+		break;
+		
+	default:
+		throw BadInstruction("Wrong operand size for pop", registers.EIP);
+	}
+	
 	registers.write(Register::ESP, esp);
 	
 	return val;
@@ -1361,4 +1679,14 @@ void CPU::update_status_flags(U32& flags, U32 op1, U32 op2, U32 result, OpSize o
 	update_adjust_flag(flags, op1, op2);
 	update_parity_flag(flags, result);
 	update_carry_flag(flags, carry);
+}
+
+U32 CPU::read_io(U8 io_address, OpSize size)
+{
+    return io.read(io_address, size);
+}
+
+void CPU::write_io(U8 io_address, U32 value, OpSize size)
+{
+    io.write(io_address, value, size);
 }
