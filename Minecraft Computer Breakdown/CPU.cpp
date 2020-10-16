@@ -262,16 +262,11 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		bit divByZero;
 		ALU::unsigned_divide(U8(data.op1 & 0xFF), (U8)10, q, r, divByZero);
 		
-		NYI; // TODO: those register calls should NOT be there!
-
-		registers.write(Register::AH, q); 
-		registers.write(Register::AL, r);
+		ret = (q << 8) | r;
 
 		update_sign_flag(flags, r, OpSize::B);
 		update_zero_flag(flags, r);
 		update_parity_flag(flags, r);
-		
-		ret = (q << 8) | r;
 		break;
 	}
 	case Opcodes::AAS:
@@ -371,7 +366,19 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	{
 		if (data.op2 > 32) {
 			// see the manual! (p. 268)
-			WARNING("The BT instruction has an incomplete implementation for memomry operands.")
+			WARNING("The BT instruction has an incomplete implementation for memory operands.")
+
+			/*
+			16 bits:
+				15-4 3-0
+				|	 |-> index of the bit to use from the 2 bytes fetched from memory
+				|-> additionnal offset for the memory operand, x2
+
+			32 bits:
+				31-5 4-0
+				|	 |-> index of the bit to use from the 4 bytes fetched from memory
+				|-> additionnal offset for the memory operand, x4
+			*/
 		}
 		
 		bit bit_val = ALU::get_bit_at(data.op1, data.op2 & 0b11111); // op2 mod 32
@@ -386,7 +393,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	case Opcodes::BTC:
 	{
 		if (data.op2 > 32) {
-			WARNING("The BTC instruction has an incomplete implementation for memomry operands.")
+			WARNING("The BTC instruction has an incomplete implementation for memory operands.")
 		}
 
 		bit bit_val = ALU::get_bit_at(data.op1, data.op2, true);
@@ -403,7 +410,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	case Opcodes::BTR:
 	{
 		if (data.op2 > 32) {
-			WARNING("The BTR instruction has an incomplete implementation for memomry operands.")
+			WARNING("The BTR instruction has an incomplete implementation for memory operands.")
 		}
 
 		ret = data.op1;
@@ -419,7 +426,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	case Opcodes::BTS:
 	{
 		if (data.op2 > 32) {
-			WARNING("The BTS instruction has an incomplete implementation for memomry operands.")
+			WARNING("The BTS instruction has an incomplete implementation for memory operands.")
 		}
 
 		ret = data.op1;
@@ -1054,44 +1061,23 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	}
 	case Opcodes::XLAT:
 	{
-		ALU::add_no_carry(data.op1, data.op2);
+		// TODO : make sure to make this instruction use 32bit addressing. 
+		//  In order to not have to fetch something from memory here, but before this instruction is executed,
+		//  The Mod r/m and SIB bytes should: add EBX and AL together to have the offset in the segment 
+		//  stored in DS to get one single byte in memory.
+		ret = data.op1;
 		break;
 	}
-	/*
-	case Opcodes::DAA:
+	case Opcodes::XOR:
 	{
-		break;
-	}
-	*/
+		ret = ALU::xor_(data.op1, data.op2);
 
-	/*
-	case Opcodes::XCHG:
-	{
-		// op1 <-op2
-		switch (inst->op1_type) {
-		case Inst::R:
-			registers.write(inst->op1, op2_val);
-			break;
-		case Inst::M:
-			ram.write(inst->op1, op2_val);
-			break;
-		default:
-			throw BadInstruction("Wrong type of operand for XCHG", registers.EIP);
-		}
-		// op2 <- op1
-		switch (inst->op2_type) {
-		case Inst::R:
-			registers.write(inst->op2, op1_val);
-			break;
-		case Inst::M:
-			ram.write(inst->op2, op1_val);
-			break;
-		default:
-			throw BadInstruction("Wrong type of operand for XCHG", registers.EIP);
-		}
+		flags &= ~(Flags::OF | Flags::CF);
+		update_parity_flag(flags, ret);
+		update_sign_flag(flags, ret, data.op1_size);
+		update_zero_flag(flags, ret);
 		break;
 	}
-	*/
 	}
 	
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));

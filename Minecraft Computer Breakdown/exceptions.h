@@ -89,6 +89,6 @@ inline void _print_warning(const char* msg, const char* function, int position, 
 	fprintf(stderr, "Warning in file %s at line %d in function '%s': %s\n", file, position, function, msg);
 }
 
-#define _WARNING_EVAL_2(msg, file, line, func) static bool $____warning_printed_flag_ ## line = false; if (!$____warning_printed_flag_ ## line) { _print_warning(msg, func, line, file); $____warning_printed_flag_ ## line = true; }
+#define _WARNING_EVAL_2(msg, file, line, func) { static bool $____warning_printed_flag_ ## line = false; if (!$____warning_printed_flag_ ## line) { _print_warning(msg, func, line, file); $____warning_printed_flag_ ## line = true; } }
 #define _WARNING_EVAL_1(msg, file, line, func) _WARNING_EVAL_2(msg, file, line, func)
 #define WARNING(msg) _WARNING_EVAL_1(msg, __ ## FILE__, __ ## LINE__, __ ## func__)
