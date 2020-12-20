@@ -9,6 +9,7 @@ namespace IA32
 {
 	extern const std::map<U16, Inst> InstTable;
 
+	/*
 	namespace Opcodes // TODO: remove? It leaks into 
 	{
 		// Approximate opcodes. Usually the lowest possible for each mnemonic.
@@ -81,4 +82,5 @@ namespace IA32
 		const U16 BSF = 0x0FBC;
 		const U16 BSR = 0x0FBD;
 	};
+	*/
 };

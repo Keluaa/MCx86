@@ -13,7 +13,7 @@
 #define INTERRUPT(mnemonic, code) throw ProcessorExeception(mnemonic, registers.EIP, code)
 
 CPU::CPU(const Inst** instructions, const U32 count)
-	: instructions(instructions), instructions_count(count) 
+	: instructions(instructions), instructions_count(count), currentInstruction(nullptr)
 {
 	// TODO: initialisation process
 	//switch_protected_mode(); // use protected mode by default
@@ -779,10 +779,10 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
         U8 last_bit_pos = 0;
 		switch (data.op1_size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
-        case UNKNOWN: throw BadInstruction("Incorrect Operand Size", registers.EIP);
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+        case OpSize::UNKNOWN: throw BadInstruction("Incorrect Operand Size", registers.EIP);
 		}
 		
 		bit carry = flags & Flags::CF;
@@ -851,10 +851,10 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
         U8 last_bit_pos = 0;
 		switch (data.op1_size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
-        case UNKNOWN: throw BadInstruction("Incorrect Operand Size", registers.EIP);
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+        case OpSize::UNKNOWN: throw BadInstruction("Incorrect Operand Size", registers.EIP);
 		}
 
         bit carry = 0;
@@ -890,6 +890,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
         update_sign_flag(flags, ret, data.op1_size);
 		update_zero_flag(flags, ret);
 		update_parity_flag(flags, ret);
+		break;
     }
     case Opcodes::SBB:
 	{
@@ -934,7 +935,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 			
 		case 0b0101: // Greater | Not less or equal
 			// ZF = 0 || (SF == OF)
-			ret = !bool(flags & Flags::ZF) | !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			ret = !bool(flags & Flags::ZF) || !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
 			break;
 			
 		case 0b0110: // Greater or Equal | Not less
@@ -1001,7 +1002,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 				merged |= data.op2;
 			}
 			else { // W operand
-				merged |= U16(data.op2) << 16;
+				merged |= static_cast<U64>(U16(data.op2)) << 16;
 			}
 			merged = ALU::shift_left(merged, carry, count);
 			ret = U32(merged >> 32);
@@ -1012,7 +1013,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 				merged |= data.op1;
 			}
 			else { // W operand
-				merged |= U16(data.op1) << 16;
+				merged |= static_cast<U64>(U16(data.op1)) << 16;
 			}
 			merged = ALU::shift_right(merged, carry, count);
 			if (data.op1_size == OpSize::DW) {
@@ -1265,9 +1266,12 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	U8 state = 0, incr_state = 0;
 	U8 index = 0, incr_index = 0;
 
-	// in the circuit implementation, each instruction circuit has its own storage
+	// in the circuit implementation, each instruction circuit has its own custom storage
 	union Storage
 	{
+		struct NoStorage
+		{} no_storage;
+
 		struct Enter
 		{
 			U32 frame_ptr;
@@ -1279,12 +1283,12 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 			U32 esp;
 		} pusha;
 		
-	} storage;
+	} storage{};
 	
 	// Yes there is no indentation. What are you going to do about this huh?
 	do
 	{
-	incr_state = 0;
+	incr_state = 0; // TODO : remove state var if not used
 	incr_index = 0;
 	repeat = 0;
 	switch (opcode) // we could consider only the first 7 bits of the opcode
@@ -1300,6 +1304,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 			eip &= 0xFFFF; // keep only the first 2 bytes
 		}
 		registers.write_EIP(eip);
+		break;
 	}
 	case Opcodes::ENTER:
 	{
@@ -1385,7 +1390,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 
 		case 0b00101: // Greater | Not less or equal
 			// ZF = 0 || (SF == OF)
-			jump = !bool(flags & Flags::ZF) | !(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
+			jump = !bool(flags & Flags::ZF) || ~(bool(flags & Flags::SF) ^ bool(flags & Flags::OF));
 			break;
 
 		case 0b00110: // Greater or Equal | Not less
@@ -1467,7 +1472,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		}
 		else {
 			U8 reversed_index = ALU::sub_no_carry(U8(7), index);
-			registers.write(index, val, data.op_size);
+			registers.write(reversed_index, val);
 		}
 		
 		if (!ALU::compare_equal(index, U8(7))) {
@@ -1514,6 +1519,9 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	}
 }
 
+/*
+ * Computes the effective address stored in the current instruction
+ */
 U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
 {
 	U32 address = currentInstruction->address_value;
@@ -1535,10 +1543,10 @@ U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
 			// scale the index using chained shifters
 			switch (scale)
 			{
-			case 0b11: index_val <<= 1; // *8
-			case 0b10: index_val <<= 1; // *4
-			case 0b01: index_val <<= 1; // *2
-			default:   break;			// *1
+			case 0b11: index_val <<= 1; [[fallthrough]]; // *8
+			case 0b10: index_val <<= 1; [[fallthrough]]; // *4
+			case 0b01: index_val <<= 1; [[fallthrough]]; // *2
+			default:   break;							 // *1
 			}
 			
 			address = ALU::add_no_carry(address, index_val);

@@ -30,10 +30,6 @@ Inst::Inst(U8 opcode, U32 flags, U32 address_value, U32 immediate_value)
 
 InstData Inst::getInstData() const
 {
-	return InstData{
-		0, 0, 0,
-		0,
-		immediate_value,
-		OpSize::DW, OpSize::DW, OpSize::DW
-	};
+	// All OpSizes are DW by default, and the address is 0
+	return InstData{ .imm = immediate_value };
 }

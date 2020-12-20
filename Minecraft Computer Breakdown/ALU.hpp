@@ -79,9 +79,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
 
@@ -217,9 +217,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (prev_size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 / 2 - 1; break; // not useful to have, but hey why not
-		case W:  last_bit_pos = sizeof(U16) * 8 / 2 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 / 2 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 / 2 - 1; break; // not useful to have, but hey why not
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 / 2 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 / 2 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 / 2 - 1; break; // start at the middle by default
 		}
 		
@@ -299,9 +299,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
 		typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
@@ -330,9 +330,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
 		
@@ -360,9 +360,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
 		typename std::make_unsigned<N>::type mask = 1 << last_bit_pos;
@@ -390,9 +390,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
 		
@@ -419,9 +419,9 @@ namespace ALU
 		U8 last_bit_pos = 0;
 		switch (size)
 		{
-		case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-		case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-		case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+		case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+		case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+		case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
 		default: last_bit_pos = sizeof(N)   * 8 - 1; break;
 		}
         typename std::make_unsigned<N>::type mask = U64(1) << last_bit_pos; // cast to max precision to prevent any problems
@@ -449,9 +449,9 @@ namespace ALU
             U8 last_bit_pos = 0;
             switch (size)
             {
-            case DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
-            case W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
-            case B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
+            case OpSize::DW: last_bit_pos = sizeof(U32) * 8 - 1; break;
+            case OpSize::W:  last_bit_pos = sizeof(U16) * 8 - 1; break;
+            case OpSize::B:  last_bit_pos = sizeof(U8)  * 8 - 1; break;
             default: last_bit_pos = sizeof(N)   * 8 - 1; break;
             }
             sign = n & (U64(1) << last_bit_pos); // cast to max precision to prevent any problems
@@ -817,7 +817,7 @@ namespace ALU
 		typename std::make_unsigned<N>::type n_unsigned = abs(n, true);
 		typename std::make_unsigned<D>::type d_unsigned = abs(d, true);
 		
-		typename std::make_unsigned<N>::type q_unsigned, r_unsigned;
+		typename std::make_unsigned<N>::type q_unsigned = 0, r_unsigned = 0;
 
 		unsigned_divide(n_unsigned, d_unsigned, q_unsigned, r_unsigned, divByZero);
 

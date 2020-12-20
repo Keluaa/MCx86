@@ -13,8 +13,8 @@
 // operands specification
 #define op1r(read) (read << 7)
 #define op2r(read) (read << 6)
-#define op1t(type, read) ((type << 10) | op1r(read))
-#define op2t(type, read) ((type << 8) | op2r(read))
+#define op1t(type, read) ((U8(type) << 10) | op1r(read))
+#define op2t(type, read) ((U8(type) << 8) | op2r(read))
 #define reg1(reg) (reg << 3) // register operands
 #define reg2(reg) (reg << 0)
 

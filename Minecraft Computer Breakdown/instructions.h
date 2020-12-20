@@ -3,7 +3,7 @@
 #include "data_types.h"
 
 
-enum OpSize : U8
+enum class OpSize : U8
 {
 	// the most used sizes have the fewest one bits
 	DW = 0b00,
@@ -12,10 +12,9 @@ enum OpSize : U8
 	UNKNOWN = 0b11
 };
 
-
-enum OpType : U8 
+enum class OpType : U8 
 {
-	// the most used operand types have the fewest 1 bits
+	// the most used operand types have the fewest 1 bits for effiency
 	NONE = 0b000,
 	REG  = 0b001, // general purpose register
 	MEM  = 0b010, // memory operand
@@ -25,7 +24,6 @@ enum OpType : U8
 	MOFF = 0b110, // Memory offset from a segment
 	CREG = 0b111, // Control/Debug/Test register
 };
-
 
 struct InstData
 {

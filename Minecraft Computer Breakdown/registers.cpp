@@ -80,10 +80,13 @@ void Registers::write_index(U8 register_index, U32 value, OpSize size)
 			// High byte
 			registers[register_index] |= (value & 0xFF) << 8;
 		}
+		break;
 	case OpSize::W:
 		registers[register_index] |= value & 0xFFFF;
+		break;
 	case OpSize::DW:
 		registers[register_index] = value;
+		break;
 	default:
 		throw RegisterException("Wrong register size", register_index);
 	}
