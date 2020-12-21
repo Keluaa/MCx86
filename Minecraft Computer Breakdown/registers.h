@@ -157,6 +157,17 @@ struct Registers
 	void control_flag_write_PG(bit value) { control_registers[0] |= value * (1 << 31); } // Paging Flag
 
 	/*
+		Interrupt Descriptor Table Register (IDTR)
+	*/
+
+	U32 IDT_base = 0;
+	U16 IDT_limit = 0;
+
+	U32 read_IDT_base() const { return IDT_base; }
+	U16 read_IDT_limit() const { return IDT_limit; }
+	void write_IDTR(U32 IDT_address, U8 size) { IDT_base = IDT_address; IDT_limit = size << 3; }
+
+	/*
 		Utilities
 	*/
 

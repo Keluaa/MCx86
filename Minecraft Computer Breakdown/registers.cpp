@@ -115,4 +115,6 @@ void Registers::complete_reset()
 
 	EIP = 0;
 	EFLAGS = 0b10;
+	IDT_base = 0;
+	IDT_limit = 0;
 }

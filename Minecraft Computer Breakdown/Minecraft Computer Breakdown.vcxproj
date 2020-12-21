@@ -161,8 +161,10 @@
     <ClInclude Include="IA-32_decoder.h" />
     <ClInclude Include="IA-32_mapping.h" />
     <ClInclude Include="instructions.h" />
+    <ClInclude Include="interrupts.h" />
     <ClInclude Include="memory_manager.hpp" />
     <ClInclude Include="RAM.hpp" />
+    <ClInclude Include="RAM_2.h" />
     <ClInclude Include="registers.h" />
     <ClInclude Include="ROM.h" />
     <ClInclude Include="stack.h" />
