@@ -88,29 +88,35 @@ namespace ComputerTests
 	public:
 		TEST_METHOD(multiply_positive)
 		{
+			bit overflow = 0;
 			U16 a = 37;
 			U16 b = 12;
-			U16 r = ALU::multiply(a, b);
+			U16 r = ALU::multiply(a, b, overflow);
 
 			Assert::IsTrue(a * b == r);
+			Assert::IsFalse(overflow);
 		}
 
 		TEST_METHOD(multiply_negative)
 		{
+			bit overflow = 0;
 			I16 a = -45;
 			I16 b = 11;
-			I16 r = ALU::multiply(a, b);
+			I16 r = ALU::multiply(a, b, overflow);
 
 			Assert::IsTrue(a * b == r);
+			Assert::IsFalse(overflow);
 		}
 
 		TEST_METHOD(multiply_overflow)
 		{
+			bit overflow = 0;
 			I16 a = 25648;
 			I16 b = 54621;
-			I16 r = ALU::multiply(a, b);
+			I16 r = ALU::multiply(a, b, overflow);
 
 			Assert::IsTrue(I16(a * b) == r);
+			Assert::IsTrue(overflow);
 		}
 	};
 

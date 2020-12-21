@@ -69,6 +69,17 @@ public:
 	}
 };
 
+class UnknownInstruction : public ExceptionWithMsg
+{
+public:
+	UnknownInstruction(const char* msg, const U16 opcode, const int pos)
+	{
+		const int buffer_size = strlen(msg) + 20;
+		char* buffer = new char[buffer_size];
+		snprintf(buffer, buffer_size, "%s (opcode: %x, at %d)", msg, (int)opcode, pos);
+		this->msg = buffer;
+	}
+};
 
 class ProcessorExeception : public ExceptionWithMsg
 {

@@ -25,6 +25,9 @@ void CPU::switch_protected_mode(bit protected_)
 	registers.control_flag_write_PE(protected_);
 }
 
+/**
+ * @brief Executes the instructions until the end of the instructions list is reached.
+*/
 void CPU::run()
 {
 	const int max_cycles = 1000;
@@ -48,6 +51,9 @@ void CPU::run()
 	std::cout << "Program finished in " << cycle << " cycles.\n";
 }
 
+/**
+ * @brief Returns the size of an operand, using the prefixes of the instruction, as well as the D flag in the current segment.
+*/
 OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment) const
 {
 	if (byte_size_override) {
@@ -61,6 +67,12 @@ OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_
 	}
 }
 
+/**
+ * @brief Executes the instruction at the address pointed by the EIP. 
+ * Handles the common part of all instructions, which is operands fetching, flags update, and writing the results to their destination.
+ * Actual instruction logic is delegated to CPU::execute_arithmetic_instruction(), CPU::execute_non_arithmetic_instruction() and
+ * CPU::execute_non_arithmetic_instruction_with_state_machine().
+*/
 void CPU::execute_instruction()
 {
 	// TODO: I think I misunderstood what the address size override prefix: it only changes the size of the address,
@@ -182,7 +194,7 @@ void CPU::execute_instruction()
 
 		if (inst->opcode & Opcodes::state_machine) {
 			// include all state machine, jump and string instructions
-			execute_non_arithmetic_instruction_with_state_machine(inst->opcode, data, flags, return_value, return_value_2);
+			execute_non_arithmetic_instruction_with_state_machine(inst->opcode, data, flags);
 		}
 		else {
 			execute_non_arithmetic_instruction(inst->opcode, data, flags, return_value, return_value_2);		
@@ -234,6 +246,13 @@ void CPU::execute_instruction()
 	}
 }
 
+/**
+ * @brief Executes the instruction specified by its opcode. This method handles all 'simple' instructions.
+ * @param data Holds instruction information
+ * @param flags EFLAGS register
+ * @param ret Return value of the instruction
+ * @param ret2 Additionnal return value of the instruction
+*/
 void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
 {
 	switch (opcode) // we could consider only the first 7 bits of the opcode
@@ -265,7 +284,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		U8 AH_val = (data.op1 & 0xFF00) >> 8;
 		U8 AL_val = data.op1 & 0xFF;
 
-		AL_val = ALU::add_no_carry(ALU::multiply(AH_val, (U8)10), AL_val);
+		AL_val = ALU::add_no_carry(ALU::multiply_no_overflow(AH_val, (U8)10), AL_val);
 
 		update_sign_flag(flags, AL_val, OpSize::B);
 		update_zero_flag(flags, AL_val);
@@ -400,12 +419,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		}
 		
 		bit bit_val = ALU::get_bit_at(data.op1, data.op2 & 0b11111); // op2 mod 32
-		if (bit_val) {
-			flags |= Flags::CF;
-		}
-		else {
-			flags &= ~Flags::CF;
-		}
+		update_carry_flag(flags, bit_val);
 		break;
 	}
 	case Opcodes::BTC:
@@ -417,12 +431,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		bit bit_val = ALU::get_bit_at(data.op1, data.op2, true);
 		ret = data.op1;
 		ALU::get_and_set_bit_at(ret, data.op2, !bit_val);
-		if (bit_val) {
-			flags |= Flags::CF;
-		}
-		else {
-			flags &= ~Flags::CF;
-		}
+		update_carry_flag(flags, bit_val);
 		break;
 	}
 	case Opcodes::BTR:
@@ -433,12 +442,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 
 		ret = data.op1;
 		bit bit_val = ALU::get_and_set_bit_at(ret, data.op2, 0);
-		if (bit_val) {
-			flags |= Flags::CF;
-		}
-		else {
-			flags &= ~Flags::CF;
-		}
+		update_carry_flag(flags, bit_val);
 		break;
 	}
 	case Opcodes::BTS:
@@ -449,12 +453,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 
 		ret = data.op1;
 		bit bit_val = ALU::get_and_set_bit_at(ret, data.op2, 1);
-		if (bit_val) {
-			flags |= Flags::CF;
-		}
-		else {
-			flags &= ~Flags::CF;
-		}
+		update_carry_flag(flags, bit_val);
 		break;
 	}
 	case Opcodes::CBW:
@@ -616,9 +615,16 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	}
 	case Opcodes::IMUL:
 	{
-		ret = ALU::multiply(data.op1, data.op2);
+		bit overflow = 0;
+		ret = ALU::multiply(data.op1, data.op2, overflow);
 
-		update_overflow_flag(flags, data.op1, data.op2, ret, OpSize::UNKNOWN, OpSize::UNKNOWN, OpSize::UNKNOWN);
+		// set both the carry and the overflow flag
+		if (overflow) {
+			flags |= Flags::OF | Flags::CF;
+		}
+		else {
+			flags &= ~(Flags::OF | Flags::CF);
+		}
 		break;
 	}
 	case Opcodes::IMULX:
@@ -631,11 +637,17 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		// and the carries from the adders are stored, and when using IMULX, 
 		// we use them to compute the remaining 32 bits of the result.
 		U64 a = I64(I32(data.op1)), b = I64(I32(data.op2)), r;
-		r = ALU::multiply(a, b);
+		bit overflow = 0;
+		r = ALU::multiply(a, b, overflow);
 		ret = U32(r >> 32);
 
-		// we can do this because we only care about the signs of the operands
-		update_overflow_flag(flags, data.op1, data.op2, ret, OpSize::DW, OpSize::DW, OpSize::DW);
+		// set both the carry and the overflow flag
+		if (overflow) {
+			flags |= Flags::OF | Flags::CF;
+		}
+		else {
+			flags &= ~(Flags::OF | Flags::CF);
+		}
 		break;
 	}
 	case Opcodes::INC:
@@ -678,8 +690,11 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	}
 	case Opcodes::MUL:
 	{
-		ret = ALU::multiply(data.op1, data.op2);
+		bit overflow = 0;
+		ret = ALU::multiply(data.op1, data.op2, overflow);
 
+		// TODO : remove this if the overflow flag works
+		/*
 		// update the flags
 		bit carry = 0;
 		switch(data.op1_size)
@@ -695,8 +710,13 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		default:
 			break; // handled in MULX
 		}
+		*/
+		if (data.op1_size == OpSize::DW) { // TODO : change? remove?
+			throw BadInstruction("MUL does not support 64bit results. Use MULX.", registers.EIP);
+		}
 		
-		if (carry) {
+		// set both the carry and the overflow flag
+		if (overflow) {
 			flags |= Flags::CF | Flags::OF;
 		}
 		else {
@@ -709,12 +729,13 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		// in the circuit, the algorithm used to get a 64bit result is optimized
 		// because the high bits of the operands are 0
 		U64 a = data.op1, b = data.op2, r;
-		r = ALU::multiply(a, b);
+		bit overflow = 0;
+		r = ALU::multiply(a, b, overflow);
 		ret = U32(r);
 		ret2 = U32(r >> 32);
 		
-		bit carry = bool(ret2);
-		if (carry) {
+		// set both the carry and the overflow flag
+		if (overflow) {
 			flags |= Flags::CF | Flags::OF;
 		}
 		else {
@@ -786,42 +807,30 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		}
 		
 		bit carry = flags & Flags::CF;
-        bit OF = 0;
+        bit overflow = 0;
 		if (rot_carry) {
 			if (rot_left) {
 				ret = ALU::rotate_left_carry(data.op1, carry, count, data.op1_size);
-                OF = carry != bit(ret & (1 << last_bit_pos));
+				overflow = carry != bit(ret & (1 << last_bit_pos));
 			}
 			else {
 				ret = ALU::rotate_right_carry(data.op1, carry, count, data.op1_size);
-                OF = bit(ret & (1 << last_bit_pos)) != bit(ret & (1 << (last_bit_pos - 1)));
+				overflow = bit(ret & (1 << last_bit_pos)) != bit(ret & (1 << (last_bit_pos - 1)));
 			}
 		}
 		else {
 			if (rot_left) {
 				ret = ALU::rotate_left(data.op1, carry, count, data.op1_size);
-                OF = carry != bit(ret & (1 << last_bit_pos));
+				overflow = carry != bit(ret & (1 << last_bit_pos));
 			}
 			else {
 				ret = ALU::rotate_right(data.op1, carry, count, data.op1_size);
-                OF = bit(ret & (1 << last_bit_pos)) != bit(ret & (1 << (last_bit_pos - 1)));
+				overflow = bit(ret & (1 << last_bit_pos)) != bit(ret & (1 << (last_bit_pos - 1)));
 			}
 		}
 		
-		if (carry) {
-			flags |= Flags::CF;
-		}
-		else {
-			flags &= ~Flags::CF;
-		}
-        
-        if (OF) {
-            flags |= Flags::OF;
-        }
-        else {
-            flags &= Flags::OF;
-        }
-		
+		update_overflow_flag_from_bit(flags, overflow);
+		update_carry_flag(flags, carry);
 		break;
 	}
     case Opcodes::SAHF:
@@ -858,35 +867,23 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		}
 
         bit carry = 0;
-        bit OF = 0;
+        bit overflow = 0;
         if (shift_left) {
             ret = ALU::shift_left(data.op1, carry, count, data.op1_size);
-            OF = bool(ret & (1 << last_bit_pos)) != carry;
+			overflow = bool(ret & (1 << last_bit_pos)) != carry;
         }
         else {
             ret = ALU::shift_right(data.op1, carry, count, data.op1_size, keep_sign);
             if (keep_sign) {
-                OF = 0;
+				overflow = 0;
             }
             else {
-                OF = bool(data.op1 & (1 << last_bit_pos));
+				overflow = bool(data.op1 & (1 << last_bit_pos));
             }
         }
 
-        if (carry) {
-            flags |= Flags::CF;
-        }
-        else {
-            flags &= ~Flags::CF;
-        }
-
-        if (OF) {
-            flags |= Flags::OF;
-        }
-        else {
-            flags &= ~Flags::OF;
-        }
-
+		update_overflow_flag_from_bit(flags, overflow);
+		update_carry_flag(flags, carry);
         update_sign_flag(flags, ret, data.op1_size);
 		update_zero_flag(flags, ret);
 		update_parity_flag(flags, ret);
@@ -1024,13 +1021,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 			}
 		}
 		
-		if (carry) {
-            flags |= Flags::CF;
-        }
-		else {
-            flags &= ~Flags::CF;
-        }
-
+		update_carry_flag(flags, carry);
         update_sign_flag(flags, ret, data.op1_size);
 		update_zero_flag(flags, ret);
 		update_parity_flag(flags, ret);
@@ -1066,7 +1057,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 	{
 		U32 result = data.op1 & data.op2;
 		
-		flags &= ~(Flags::OF | Flags::CF);
+		flags &= ~(Flags::OF | Flags::CF); // clear the OF and CF flags
 		update_parity_flag(flags, result);
 		update_sign_flag(flags, result, data.op1_size);
 		update_zero_flag(flags, result);
@@ -1093,15 +1084,26 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, U
 		// TODO: flags
 		break;
 	}
+	default:
+	{
+		throw UnknownInstruction("Unknown arithmetic instruction", opcode, registers.EIP);
 	}
-	
+	}
+
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
 }
 
+/**
+ * @brief  Executes the instruction specified by its opcode. This method handles special instructions which needs to access or modify special data,
+ * like stack operations, I/O, descriptor table operations...
+ * @param data Holds instruction information
+ * @param flags EFLAGS register
+ * @param ret Return value of the instruction
+ * @param ret2 Additionnal return value of the instruction
+*/
 void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
 {
-	// those instructions are separated from thee rest as they a either
-	// more complex, or access special data.
+	// TODO : check if ret and ret2 are both needed
 	
 	switch (opcode) // we could consider only the first 7 bits of the opcode
 	{
@@ -1242,12 +1244,21 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
 		// TODO ? (here is also a priviliege check to do, I think)
 		break;
 	}
+	default:
+	{
+		throw UnknownInstruction("Unknown Non-arithmetic instruction", opcode, registers.EIP);
+	}
 	}
 	
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1, true));
 }
 
-void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2)
+/**
+ * @brief Handles more complex instructions, which may require serveral clock cycles to execute, or modifies the instruction pointer explicitly.
+ * @param data Holds instruction information
+ * @param flags EFLAGS register
+*/
+void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, U32& flags)
 {
 	// All parameters are stored on pseudo registers which are read
 	// each loop. Their values cannot change during execution.
@@ -1504,6 +1515,10 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		}
 		break;
 	}
+	default:
+	{
+		throw UnknownInstruction("Unknown Non-arithmetic state machine instruction", opcode, registers.EIP);
+	}
 	}
 	// dedicated incrementation zone
 	if (incr_state) {
@@ -1519,9 +1534,9 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	}
 }
 
-/*
- * Computes the effective address stored in the current instruction
- */
+/**
+ * @brief Computes the effective address of the address operand of the current instruction.
+*/
 U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
 {
 	U32 address = currentInstruction->address_value;
@@ -1618,6 +1633,11 @@ U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
 	return address;
 }
 
+/**
+ * @brief Push a value to the stack, of variable size.
+ * @param value The value to push
+ * @param size The size of the value
+*/
 void CPU::push(U32 value, OpSize size)
 {
 	U32 esp = registers.read(Register::ESP);
@@ -1644,7 +1664,12 @@ void CPU::push(U32 value, OpSize size)
 	
 	stack.push(value);
 }
-	
+
+/**
+ * @brief Pop a value from the stack.
+ * @param size The size of the value.
+ * @return The value popped
+*/
 U32 CPU::pop(OpSize size)
 {
 	U32 val = stack.top();
@@ -1675,6 +1700,10 @@ U32 CPU::pop(OpSize size)
 	return val;
 }
 
+/**
+ * @brief Utility function used to compute and update the value of the overflow flag, after a addition or substraction.
+ * To do this we need both the operands and the result, as well as their sizes.
+*/
 void CPU::update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize)
 {
 	/*
@@ -1687,7 +1716,7 @@ void CPU::update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize 
 	- - - 0
 	- - + 1
 
-	=> (s(op1) & s(op2)) ^ s(R)
+	=> (sign(op1) & sign(op2)) ^ sign(R)
 	*/
 	bit is_op1_neg = ALU::check_is_negative(op1, op1Size, true);
 	bit is_op2_neg = ALU::check_is_negative(op2, op2Size, true);
@@ -1701,6 +1730,22 @@ void CPU::update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize 
 	}
 }
 
+/**
+ * @brief Utility function used to update the value of the overflow flag, from an already computed flag.
+*/
+void CPU::update_overflow_flag_from_bit(U32& flags, bit overflow)
+{
+	if (overflow) {
+		flags |= Flags::OF;
+	}
+	else {
+		flags &= ~Flags::OF;
+	}
+}
+
+/**
+ * @brief Utility function used to update the value of the sign flag based on the sign of the result.
+*/
 void CPU::update_sign_flag(U32& flags, U32 result, OpSize size)
 {
 	if (ALU::check_is_negative(result, size, true)) {
@@ -1711,6 +1756,9 @@ void CPU::update_sign_flag(U32& flags, U32 result, OpSize size)
 	}
 }
 
+/**
+ * @brief Utility function used to update the value of the zero flag.
+*/
 void CPU::update_zero_flag(U32& flags, U32 result)
 {
 	if (ALU::check_equal_zero(result, true)) {
@@ -1721,6 +1769,9 @@ void CPU::update_zero_flag(U32& flags, U32 result)
 	}
 }
 
+/**
+ * @brief Utility function used to update the value of the adjust flag, after a arithmetic operation using the value of the AL register.
+*/
 void CPU::update_adjust_flag(U32& flags, U32 op1, U32 op2)
 {
 	/*
@@ -1730,7 +1781,7 @@ void CPU::update_adjust_flag(U32& flags, U32 op1, U32 op2)
 	*/
 	if (currentInstruction->op1_type == OpType::REG && currentInstruction->op1_register == 0) {
 		// Not the implementation used in the circuit, which is much simpler, 
-		// as this flag comes out from the adder directly.
+		// as this flag can come out from the adder directly.
 		bit AF = (op1 & 0x0F) + (op2 & 0x0F) > 0x0F;
 		if (AF) {
 			flags |= Flags::AF;
@@ -1744,6 +1795,9 @@ void CPU::update_adjust_flag(U32& flags, U32 op1, U32 op2)
 	}
 }
 
+/**
+ * @brief Utility function used to update the value of the parity flag.
+*/
 void CPU::update_parity_flag(U32& flags, U32 result)
 {
 	/*
@@ -1757,16 +1811,22 @@ void CPU::update_parity_flag(U32& flags, U32 result)
 	}
 }
 
+/**
+ * @brief Utility function used to update the value of the carry flag.
+*/
 void CPU::update_carry_flag(U32& flags, bit carry)
 {
 	if (carry) {
-		flags |= Flags::PF;
+		flags |= Flags::CF;
 	}
 	else {
-		flags &= ~Flags::PF;
+		flags &= ~Flags::CF;
 	}
 }
 
+/**
+ * @brief Utility function used to update all arithmetic flags
+*/
 void CPU::update_status_flags(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry)
 {
 	// updates all status flags
@@ -1778,11 +1838,17 @@ void CPU::update_status_flags(U32& flags, U32 op1, U32 op2, U32 result, OpSize o
 	update_carry_flag(flags, carry);
 }
 
+/**
+ * @brief Read bytes from the IO buffer
+*/
 U32 CPU::read_io(U8 io_address, OpSize size)
 {
     return io.read(io_address, size);
 }
 
+/**
+ * @brief Write bytes to the IO buffer
+*/
 void CPU::write_io(U8 io_address, U32 value, OpSize size)
 {
     io.write(io_address, value, size);

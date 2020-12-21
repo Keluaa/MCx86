@@ -217,25 +217,25 @@ namespace Opcodes
 
 	// Non arithmetic instructions on strings
 	
-	constexpr U8 CMPS    =  0 | not_arithmethic | str;
-	constexpr U8 INS     =  1 | not_arithmethic | str;
-	constexpr U8 LODS    =  2 | not_arithmethic | str;
-	constexpr U8 MOVS    =  3 | not_arithmethic | str;
-	constexpr U8 OUTS    =  4 | not_arithmethic | str;
-	constexpr U8 SCAS    =  5 | not_arithmethic | str;
-	constexpr U8 STOS    =  6 | not_arithmethic | str;
+	constexpr U8 CMPS    =  0 | not_arithmethic | str; // TODO : implement
+	constexpr U8 INS     =  1 | not_arithmethic | str; // TODO : implement
+	constexpr U8 LODS    =  2 | not_arithmethic | str; // TODO : implement
+	constexpr U8 MOVS    =  3 | not_arithmethic | str; // TODO : implement
+	constexpr U8 OUTS    =  4 | not_arithmethic | str; // TODO : implement
+	constexpr U8 SCAS    =  5 | not_arithmethic | str; // TODO : implement
+	constexpr U8 STOS    =  6 | not_arithmethic | str; // TODO : implement
 	
 	// Non arithmetic instructions with jumps
 	
 	constexpr U8 CALL    =  0 | not_arithmethic | jmp;
-	constexpr U8 INT     =  1 | not_arithmethic | jmp;
-	constexpr U8 IRET    =  2 | not_arithmethic | jmp;
+	constexpr U8 INT     =  1 | not_arithmethic | jmp; // TODO : implement
+	constexpr U8 IRET    =  2 | not_arithmethic | jmp; // TODO : implement
 	constexpr U8 Jcc     =  3 | not_arithmethic | jmp; // heavily modified to fit in one instruction
-	constexpr U8 JMP     =  4 | not_arithmethic | jmp;
-	constexpr U8 LEAVE   =  5 | not_arithmethic | jmp;
-	constexpr U8 LOOP    =  6 | not_arithmethic | jmp;
-	constexpr U8 REP     =  7 | not_arithmethic | jmp;
-	constexpr U8 RET     =  8 | not_arithmethic | jmp;
+	constexpr U8 JMP     =  4 | not_arithmethic | jmp; // TODO : implement
+	constexpr U8 LEAVE   =  5 | not_arithmethic | jmp; // TODO : implement
+	constexpr U8 LOOP    =  6 | not_arithmethic | jmp; // TODO : implement
+	constexpr U8 REP     =  7 | not_arithmethic | jmp; // TODO : implement
+	constexpr U8 RET     =  8 | not_arithmethic | jmp; // TODO : implement
 
 	// State Machine instructions
 

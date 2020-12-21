@@ -688,7 +688,7 @@ namespace ALU
 		Shifts are trivial in the circuit implementation, since the loop is unrolled bit lines are shifted in the circuit.
 	*/
 	template<typename A, typename B>
-	constexpr A multiply(A a, B b)
+	constexpr A multiply(A a, B b, bit& overflow)
 	{
 		static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "Multiply operands must be of integral type");
 		static_assert(sizeof(A) >= sizeof(B), "First operand of 'multiply' must have at least the same bit length than the second");
@@ -699,16 +699,27 @@ namespace ALU
 		typename std::make_unsigned<A>::type a_bits = a;
 		typename std::make_unsigned<A>::type b_bits = b;
 
+		bit carry = 0;
+
 		typename std::make_unsigned<A>::type stack_bits = 0;
 		for (int i = 0; i < sizeof(A) * 8; i++) {
 			if (b_bits & 1) {
-				stack_bits = add_no_carry(stack_bits, a_bits, true); // stack += a (overflow ignored)
+				stack_bits = add(stack_bits, a, carry, true); // stack += a
+				overflow |= carry;
 			}
 			a_bits <<= 1;
 			b_bits >>= 1;
 		}
 
 		return stack_bits; // will cast to signed if necessary
+	}
+
+
+	template<typename A, typename B>
+	constexpr A multiply_no_overflow(A a, B b)
+	{
+		bit overflow = 0;
+		return multiply(a, b, overflow);
 	}
 
 	

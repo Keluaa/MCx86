@@ -6,20 +6,24 @@
 #include "ALU.hpp"
 #include "instructions.h"
 #include "registers.h"
-#include "RAM.hpp"
+//#include "RAM.hpp"
+#include "RAM_2.h"
 #include "ROM.h"
 #include "exceptions.h"
+#include "interrupts.h"
 
 
 class CPU
 {
 	Registers registers;
-	RAM<512> ram;
+	RAM<4096> ram;
 	ROM<U32, 512> rom;
     RAM<128> io;
 	
 	// stack, supposedly stored at the segment pointed by the SS register
 	std::stack<U32> stack; // TODO : replace this with a low level implementation
+
+	Interrupts::InterruptDescriptorTable<64>* interruptsTable;
 
 	const Inst** instructions;
 	const U32 instructions_count;
@@ -30,15 +34,17 @@ class CPU
 	
 	void execute_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
 	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
-	void execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, U32& flags, U32& ret, U32& ret2);
+	void execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, U32& flags);
 	
 	U32 compute_address(bit _32bits_mode, OpSize opSize) const;
 	
 	void push(U32 value, OpSize size = OpSize::UNKNOWN);
-	
 	U32 pop(OpSize size = OpSize::UNKNOWN);
 
+	void interrupt();
+
 	void update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize);
+	void update_overflow_flag_from_bit(U32& flags, bit overflow);
 	void update_sign_flag(U32& flags, U32 result, OpSize size);
 	void update_zero_flag(U32& flags, U32 result);
 	void update_adjust_flag(U32& flags, U32 op1, U32 op2);
