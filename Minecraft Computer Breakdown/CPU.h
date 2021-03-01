@@ -7,7 +7,7 @@
 #include "instructions.h"
 #include "registers.h"
 //#include "RAM.hpp"
-#include "RAM_2.h"
+#include "RAM_2.hpp"
 #include "ROM.h"
 #include "exceptions.h"
 #include "interrupts.h"
@@ -16,9 +16,9 @@
 class CPU
 {
 	Registers registers;
-	RAM<4096> ram;
+	RAM<4096, U32> ram;
 	ROM<U32, 512> rom;
-    RAM<128> io;
+    RAM<128, U8> io;
 	
 	// stack, supposedly stored at the segment pointed by the SS register
 	std::stack<U32> stack; // TODO : replace this with a low level implementation
@@ -29,6 +29,10 @@ class CPU
 	const U32 instructions_count;
 	
 	const Inst* currentInstruction;
+
+	U32 clock_cycle_count = 0;
+
+	void new_clock_cycle();
 	
 	OpSize get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment = 0) const;
 	
@@ -41,7 +45,7 @@ class CPU
 	void push(U32 value, OpSize size = OpSize::UNKNOWN);
 	U32 pop(OpSize size = OpSize::UNKNOWN);
 
-	void interrupt();
+	void interrupt(Interrupts::Interrupt interrupt);
 
 	void update_overflow_flag(U32& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize);
 	void update_overflow_flag_from_bit(U32& flags, bit overflow);

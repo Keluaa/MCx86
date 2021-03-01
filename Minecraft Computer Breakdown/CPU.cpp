@@ -13,7 +13,7 @@
 #define INTERRUPT(mnemonic, code) throw ProcessorExeception(mnemonic, registers.EIP, code)
 
 CPU::CPU(const Inst** instructions, const U32 count)
-	: instructions(instructions), instructions_count(count), currentInstruction(nullptr)
+	: instructions(instructions), instructions_count(count), currentInstruction(nullptr), interruptsTable(nullptr)
 {
 	// TODO: initialisation process
 	//switch_protected_mode(); // use protected mode by default
@@ -31,14 +31,8 @@ void CPU::switch_protected_mode(bit protected_)
 void CPU::run()
 {
 	const int max_cycles = 1000;
-	int cycle = 0;
 	while (registers.EIP < instructions_count) {
-		cycle++;
-		if (cycle >= max_cycles) {
-			std::cout << "Max cycles reached. Interrupting program.\n";
-			break;
-		}
-
+		new_clock_cycle();
 		try {
 			execute_instruction(); // increments the EIP register
 		}
@@ -46,9 +40,23 @@ void CPU::run()
 			std::cerr << e.what() << "\n";
 			break;
 		}
+
+		if (clock_cycle_count >= max_cycles) {
+			std::cout << "Max cycles reached. Interrupting program.\n";
+			break;
+		}
 	}
 
-	std::cout << "Program finished in " << cycle << " cycles.\n";
+	std::cout << "Program finished in " << clock_cycle_count << " cycles.\n";
+}
+
+/**
+ * @brief Utility to keep track of how many cycles elapsed
+*/
+void CPU::new_clock_cycle()
+{
+	clock_cycle_count++;
+	// TODO : maybe reset the branch monitor here
 }
 
 /**
@@ -1527,6 +1535,9 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	if (incr_index) {
 		index = ALU::add_no_carry(index, U8(1));
 	}
+	if (repeat) {
+		new_clock_cycle();
+	}
 	} while (repeat);
 	
 	if (incr_EIP) {
@@ -1698,6 +1709,52 @@ U32 CPU::pop(OpSize size)
 	registers.write(Register::ESP, esp);
 	
 	return val;
+}
+
+/**
+ * @brief Called to trigger an interrupt: saves the position in the program, setup the stack and error code data,
+ * then switch to the corresponding interrupt handler. There is serveral things we need push to the stack, so we must
+ * use the state machine design in order to spread them in serveral clock cycles.
+ * @param interrupt Interrupt info
+*/
+void CPU::interrupt(Interrupts::Interrupt interrupt)
+{
+	U8 index = 0;
+	bit repeat = 0, incr_index = 0;
+
+	do {
+		repeat = 0;
+		incr_index = 0;
+
+		switch (interrupt.type)
+		{
+		case Interrupts::Type::Fault:
+			// at
+			// TODO : interrupts, see the 1986 manual at page 160, or the most recent one at page 3006
+			break;
+
+		case Interrupts::Type::Trap:
+			// after
+			break;
+
+		case Interrupts::Type::Abort:
+			break;
+
+		case Interrupts::Type::User:
+			// after
+			break;
+
+		default:
+			break;
+		}
+
+		if (incr_index) {
+			index = ALU::add_no_carry(index, U8(1));
+		}
+		if (repeat) {
+			new_clock_cycle();
+		}
+	} while (repeat);
 }
 
 /**

@@ -4,7 +4,7 @@
 
 namespace Interrupts
 {
-	enum class Type : U8 { None, Fault, Trap, Abort };
+	enum class Type : U8 { None, Fault, Trap, Abort, User };
 
 	struct Interrupt 
 	{
