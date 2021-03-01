@@ -23,7 +23,7 @@ namespace ComputerTests
 			U32 n = -1;
 			U32 r = ALU::negate(n);
 
-			Assert::IsTrue(-n == r);
+			Assert::IsTrue(U32(-I32(n)) == r);
 		}
 
 		TEST_METHOD(negate_any)
@@ -105,14 +105,14 @@ namespace ComputerTests
 			I16 r = ALU::multiply(a, b, overflow);
 
 			Assert::IsTrue(a * b == r);
-			Assert::IsFalse(overflow);
+			Assert::IsTrue(overflow); // the overflow flag should be set as the MSB are set for negative integers
 		}
 
 		TEST_METHOD(multiply_overflow)
 		{
 			bit overflow = 0;
 			I16 a = 25648;
-			I16 b = 54621;
+			U16 b = 54621;
 			I16 r = ALU::multiply(a, b, overflow);
 
 			Assert::IsTrue(I16(a * b) == r);
@@ -167,12 +167,34 @@ namespace ComputerTests
 
 		TEST_METHOD(get_and_set_bit_at)
 		{
-			U32 n = 0x400;
-			bit i_bit = ALU::get_and_set_bit_at(n, 0b01010, 0);
+			U32 n = 1 << 9;
+			bit i_bit = ALU::get_and_set_bit_at(n, 9, 0);
 
 			Assert::IsTrue(i_bit);
 			Assert::IsTrue(n == 0);
 		}
 	};
+	
+	TEST_CLASS(ALU_equal_tests)
+	{
+		TEST_METHOD(equal_0)
+		{
+			U8 a = 0;
+			U8 b = 0;
 
+			bit res = ALU::compare_equal(a, b);
+
+			Assert::IsTrue(res == (a == b));
+			
+			b = 1;
+			res = ALU::compare_equal(a, b);
+			
+			Assert::IsTrue(res == (a == b));
+
+			b = 0b10;
+			res = ALU::compare_equal(a, b);
+
+			Assert::IsTrue(res == (a == b));
+		}
+	};
 }

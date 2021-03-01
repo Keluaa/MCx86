@@ -8,6 +8,8 @@
 
 /*
 	TODO: fix description
+	TODO: normalise descriptions with doxygen
+	TODO: add const modifier everywhere please
 
 	Mimics the behaviour of all functionnalities of the ALU, using only the basic operations available.
 	Those basic operations include:
@@ -111,6 +113,35 @@ namespace ALU
 	}
 
 
+	/**
+	 * @brief Returns 1 if there is only one set bit in n, else returns 0
+	*/
+	template<typename N>
+	constexpr bit check_power_of_2(const N n, bool _internal_call = false)
+	{
+		static_assert(std::is_integral<N>{}, "check_power_of_2 operand must be of integral type");
+		static_assert(std::is_unsigned<N>{}, "check_power_of_2 operand must be an unsigned type");
+
+		if (!_internal_call) USE_BRANCH(branchMonitor);
+
+		bit one_encountered = 0;
+		N mask = 1;
+		for (int i = 0; i < sizeof(N) * 8; i++) {
+			if (mask & n) {
+				if (one_encountered) {
+					return false;
+				}
+				else {
+					one_encountered = 1;
+				}
+			}
+			mask <<= 1;
+		}
+
+		return one_encountered;
+	}
+
+
     template<typename A, typename B>
 	constexpr bit compare_equal(A a, B b, bool _internal_call = false)
 	{
@@ -123,7 +154,7 @@ namespace ALU
         typename std::make_unsigned<A>::type mask = 1;
 
         for (int i = 0; i < sizeof(A) * 8; i++) {
-            if (((a & mask) ^ (b & mask)) == 1) {
+            if (((a & mask) ^ (b & mask)) != 0) {
                 return false;
             }
             mask <<= 1;
@@ -437,6 +468,14 @@ namespace ALU
     }
 
 
+	template<typename N>
+	constexpr N shift_left_no_carry(N n, U8 count, OpSize size = OpSize::UNKNOWN)
+	{
+		bit _ = 0;
+		return shift_left(n, _, count, size);
+	}
+
+
     template<typename N>
     constexpr N shift_right(N n, bit& carry, U8 count, OpSize size = OpSize::UNKNOWN, bit keep_sign = false)
     {
@@ -503,7 +542,7 @@ namespace ALU
 	{
 		static_assert(std::is_integral<N>{}, "get_last_set_bit_index operand must be of integral type");
 
-		if (!_internal_call) USE_BRANCH(branchMonitor);
+		// TODO : make a more realistic implementation
 
 		typename std::make_unsigned<N>::type mask = 1 << (sizeof(N) * 8 - 1);
 		for (int i = sizeof(N) * 8 - 1; i >= 0; i--) {
@@ -516,6 +555,14 @@ namespace ALU
 
 		isZero = true;
 		return 0;
+	}
+
+
+	template<typename N>
+	constexpr U8 get_last_set_bit_index_no_zero(N n, bool _internal_call = false)
+	{
+		bit _ = 0;
+		return get_last_set_bit_index(n, _, _internal_call);
 	}
 
 
@@ -555,6 +602,8 @@ namespace ALU
 			}
 		}
 
+		bit is_bit_set = bit(n & bit_mask);
+
 		if (!_no_set) {
 			n &= ~bit_mask;
 			if (val) {
@@ -562,7 +611,7 @@ namespace ALU
 			}
 		}
 
-		return bit(n & bit_mask);
+		return is_bit_set;
 	}
 
 
@@ -591,7 +640,7 @@ namespace ALU
 		
 		A stack = 0;
 		typename std::make_unsigned<A>::type mask = 1, tmp;
-		typename std::make_unsigned<A>::type _carry = bool(carry);
+		typename std::make_unsigned<A>::type _carry = bit(carry);
 		for (int i = 0; i < sizeof(A) * 8; i++) {
 			if (i != 0) {
 				_carry <<= 1;
@@ -602,7 +651,7 @@ namespace ALU
 			mask <<= 1;
 		}
 
-		carry = bool(_carry);
+		carry = bit(_carry);
 		return stack;
 	}
 	
@@ -686,6 +735,8 @@ namespace ALU
 		Pen and paper multiplication.
 		Minimises the number of additions performed.
 		Shifts are trivial in the circuit implementation, since the loop is unrolled bit lines are shifted in the circuit.
+
+		TODO : maybe make a signed version in order to optimize multiplication with small negative numbers, where numbers are made positive, then mutiplied, then the sign is added back
 	*/
 	template<typename A, typename B>
 	constexpr A multiply(A a, B b, bit& overflow)
@@ -704,7 +755,8 @@ namespace ALU
 		typename std::make_unsigned<A>::type stack_bits = 0;
 		for (int i = 0; i < sizeof(A) * 8; i++) {
 			if (b_bits & 1) {
-				stack_bits = add(stack_bits, a, carry, true); // stack += a
+				carry = 0; // do not use the carry for the addition, it is only here for the overflow flag
+				stack_bits = add(stack_bits, a_bits, carry, true); // stack += a
 				overflow |= carry;
 			}
 			a_bits <<= 1;
