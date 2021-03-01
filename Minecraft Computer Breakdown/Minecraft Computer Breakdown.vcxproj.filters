@@ -57,7 +57,10 @@
     <ClInclude Include="interrupts.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="RAM_2.h">
+    <ClInclude Include="RAM_2.hpp">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticBinaryTreeManagedMemory.hpp">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>

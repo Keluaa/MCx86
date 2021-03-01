@@ -37,6 +37,9 @@ https://intelxed.github.io/ref-manual/index.html
 
 Autre emu intel:
 Intel SDE
+
+Description complète des ELF: https://www.youtube.com/watch?v=nC1U1LJQL8o
+
 */
 
 #ifdef _MSC_VER
@@ -71,7 +74,7 @@ const Inst** load_fibbonacci(U32& instructions_count)
 {
 	instructions_count = 0;
 	Inst** instructions = new Inst*[instructions_count];
-	std::memset(instructions, NULL, instructions_count);
+	std::memset(instructions, 0, instructions_count);
 
 	// TODO
 

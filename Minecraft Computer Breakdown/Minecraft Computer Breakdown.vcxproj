@@ -164,10 +164,11 @@
     <ClInclude Include="interrupts.h" />
     <ClInclude Include="memory_manager.hpp" />
     <ClInclude Include="RAM.hpp" />
-    <ClInclude Include="RAM_2.h" />
+    <ClInclude Include="RAM_2.hpp" />
     <ClInclude Include="registers.h" />
     <ClInclude Include="ROM.h" />
     <ClInclude Include="stack.h" />
+    <ClInclude Include="StaticBinaryTreeManagedMemory.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPU.cpp" />
