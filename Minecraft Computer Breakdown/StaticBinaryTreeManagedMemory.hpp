@@ -209,29 +209,12 @@ template<U32 memory_size, U8 granularity>
 constexpr U32 StaticBinaryTreeManagedMemory<memory_size, granularity>::compute_cells_count()
 {
 	return memory_size / (8 * granularity);
-
-	//return memory_size / (granularity << 3);
-
-	//return memory_size >> (granularity + 2);
 }
 
 template<U32 memory_size, U8 granularity>
 constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_max_layer()
 {
 	return ALU::get_last_set_bit_index_no_zero(compute_cells_count());
-
-	/*
-		U32 mem = memory_size; // 128
-	U8 gran = granularity; // 4
-
-	U8 a = ALU::get_last_set_bit_index_no_zero(mem); // 7
-
-	U8 b = (gran + 1); // 5
-
-	U8 c = a - b; // 2
-
-	return c;
-	*/
 }
 
 
@@ -257,43 +240,6 @@ constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_alloca
 	}
 
 	return cells_pow;
-
-	/*
-	// check if the part excluded from the previous operation is null or not
-	if (ALU::check_different_than_zero((cells_count << granularity) >> granularity)) {
-		cells_count = ALU::add_no_carry(cells_count, U8(1));
-	}
-
-	// To get the alloc_size we round it to the next power of two
-	U8 alloc_size = ALU::get_last_set_bit_index(cells_count, is_zero);
-
-	if (is_zero) {
-		return 0;
-	}
-
-	if (!ALU::check_power_of_2(cells_count)) {
-		alloc_size = ALU::add_no_carry(alloc_size, U8(1));
-	}
-
-	return alloc_size;
-	*/
-
-	/*
-	bit is_zero;
-	U8 alloc_size = ALU::get_last_set_bit_index(bytes, is_zero);
-
-	if (is_zero) {
-		return 0;
-	}
-
-	if (ALU::check_power_of_2(bytes)) {
-		alloc_size = ALU::sub_no_carry(alloc_size, U8(1));
-	}
-
-	alloc_size = ALU::shift_right_no_carry(alloc_size, granularity, OpSize::DW);
-
-	return alloc_size;
-	*/
 }
 
 
@@ -425,7 +371,9 @@ bool StaticBinaryTreeManagedMemory<memory_size, granularity>::do_is_equal(const 
 		return false;
 	}
 	else {
-		return memory_position == other->memory_position && memory_size == other->get_memory_size() && granularity == other->get_granularity();
+		return memory_position == other->memory_position 
+			&& memory_size == other->get_memory_size() 
+			&& granularity == other->get_granularity();
 	}
 }
 
