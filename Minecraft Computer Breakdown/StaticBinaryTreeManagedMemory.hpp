@@ -22,7 +22,7 @@ struct TreeCell
 
 	const U16 cell_size;
 
-	U8* const memory_position;
+	const U8* const memory_position;
 
 	TreeCell<layer - 1>* const right;
 	TreeCell<layer - 1>* const left;
@@ -49,7 +49,7 @@ struct TreeCell
 	U16 right_slots;
 	U16 left_slots;
 
-	TreeCell(U16 cell_size, U8* const memory_position)
+	TreeCell(U16 cell_size, const U8* const memory_position)
 		: cell_size(cell_size), memory_position(memory_position),
 		  right(new TreeCell<layer - 1>(cell_size / 2, memory_position)),
 		  left(new TreeCell<layer - 1>(cell_size / 2, memory_position + cell_size / 2)),
@@ -62,10 +62,8 @@ struct TreeCell
 		delete left;
 	}
 
-	U8* allocate_for(U8 alloc_size);
-	
+    const U8* allocate_for(U8 alloc_size);
 	void deallocate(U32 cell_index, U8 target_layer);
-
 	void update_alloc_slots();
 };
 
@@ -75,67 +73,22 @@ struct TreeCell<1>
 {
 	const U32 cell_size;
 
-	U8* const memory_position;
+    const U8* const memory_position;
 
 	const U32 mask;
 	U32 alloc_slots;
 	bit right_slot;
 
-	TreeCell(U32 cell_size, U8* const memory_position)
+	TreeCell(U32 cell_size, const U8* const memory_position)
 		: cell_size(cell_size), memory_position(memory_position),
 		  mask(0b11), alloc_slots(0), right_slot(0)
 	{ }
 
 	~TreeCell() = default;
 
-	U8* allocate_for(U8 alloc_size)
-	{
-		if (alloc_size == 0b1) {
-			// allocate the whole cell
-			alloc_slots = mask;
-
-			return memory_position;
-		}
-		else {
-			// simplification for the first layer, since there is no children here, and there must be a parent
-			if (right_slot == 0) {
-				// allocate the right cell
-				right_slot = 1;
-
-				if (alloc_slots == 0b10) {
-					alloc_slots = mask; // the left cell is also allocated, this cell is full
-				}
-				else {
-					alloc_slots = 0b10;
-				}
-				
-				return memory_position;
-			}
-			else {
-				// allocate the left cell, which makes this cell filled
-				alloc_slots = mask;
-
-				return memory_position + cell_size / 2;
-			}
-		}
-	}
-
-	void deallocate(U32 cell_index, U8 target_layer)
-	{
-		if ((target_layer & 0b1) == 0b1) {
-			// we are at the cell we want to deallocate
-			alloc_slots = 0b00;
-		}
-		else {
-			// we want to deallocate a cell at the layer 0
-			if ((cell_index & 0b1) == 0b0) {
-				right_slot = 0; // deallocate the right cell
-			}
-
-			// deallocate the child cell, while taking into account that the other child cell might be still allocated
-			alloc_slots = right_slot << 1;
-		}
-	}
+	// Did you know? Explicit template class methods must be marked with inline if they use a different definition
+    inline const U8* allocate_for(U8 alloc_size);
+    inline void deallocate(U32 cell_index, U8 target_layer);
 };
 
 
@@ -143,28 +96,28 @@ template<U8 layer>
 constexpr U32 get_cell_allocated_size(const TreeCell<layer>* cell);
 
 
-class _StaticBinaryTreeManagedMemoryBase : public std::pmr::memory_resource
+class StaticBinaryTreeManagedMemoryBase : public std::pmr::memory_resource
 {
 public:
-	_StaticBinaryTreeManagedMemoryBase(U8* const memory_position) : memory_position(memory_position) { }
+	explicit StaticBinaryTreeManagedMemoryBase(const U8* const memory_position) : memory_position(memory_position) { }
 
-	virtual ~_StaticBinaryTreeManagedMemoryBase() = default;
+	~StaticBinaryTreeManagedMemoryBase() override = default;
 
-	virtual U32 get_memory_size() const { return 0; }
-	virtual U8 get_granularity() const { return 0; }
-	virtual U32 get_allocated_memory_size() const { return 0; }
-	virtual U32 get_cells_count() const { return 0; }
-	virtual U32 get_layers_count() const { return 0; }
+    [[maybe_unused]] [[nodiscard]] virtual U32 get_memory_size() const { return 0; }
+    [[maybe_unused]] [[nodiscard]] virtual U8 get_granularity() const { return 0; }
+    [[maybe_unused]] [[nodiscard]] virtual U32 get_allocated_memory_size() const { return 0; }
+    [[maybe_unused]] [[nodiscard]] virtual U32 get_cells_count() const { return 0; }
+    [[maybe_unused]] [[nodiscard]] virtual U32 get_layers_count() const { return 0; }
 
-	U8* const memory_position;
+    const U8* const memory_position;
 };
 
 
 template<U32 memory_size, U8 granularity>
-class StaticBinaryTreeManagedMemory : public _StaticBinaryTreeManagedMemoryBase
+class StaticBinaryTreeManagedMemory : public StaticBinaryTreeManagedMemoryBase
 {
-	static_assert(std::_Is_pow_2(granularity));
-	static_assert(std::_Is_pow_2(memory_size));
+    static_assert(ALU::check_power_of_2(granularity));
+    static_assert(ALU::check_power_of_2(memory_size));
 	static_assert(memory_size >= 8); // memory_size must be in bits, not bytes!
 	static_assert(memory_size >= granularity * 8); // granularity must be in bytes, I know it is confusing
 
@@ -172,27 +125,26 @@ class StaticBinaryTreeManagedMemory : public _StaticBinaryTreeManagedMemoryBase
 	static constexpr U32 compute_cells_count();
 
 	constexpr U8 get_allocation_size(size_t bytes, bit& is_zero);
-	constexpr U8* get_cell_at(U32 address);
 
 public:
-	StaticBinaryTreeManagedMemory(U8* const memory_position) 
-		: _StaticBinaryTreeManagedMemoryBase(memory_position),
+	explicit StaticBinaryTreeManagedMemory(const U8* const memory_position)
+		: StaticBinaryTreeManagedMemoryBase(memory_position),
 		  layers_count(get_max_layer()), cells_count(compute_cells_count()),
 		  allocator_tree_root(granularity << layers_count, memory_position)
 	{ }
 
-	virtual ~StaticBinaryTreeManagedMemory() = default;
+	~StaticBinaryTreeManagedMemory() override = default;
 
-	virtual U32 get_memory_size() const { return memory_size; }
-	virtual U8 get_granularity() const { return granularity; }
-	virtual U32 get_cells_count() const { return cells_count; }
-	virtual U32 get_layers_count() const { return layers_count; }
-	virtual U32 get_allocated_memory_size() const;
+	[[maybe_unused]] [[nodiscard]] U32 get_memory_size() const override { return memory_size; }
+	[[maybe_unused]] [[nodiscard]] U8 get_granularity() const override { return granularity; }
+	[[maybe_unused]] [[nodiscard]] U32 get_cells_count() const override { return cells_count; }
+	[[maybe_unused]] [[nodiscard]] U32 get_layers_count() const override { return layers_count; }
+	[[maybe_unused]] [[nodiscard]] U32 get_allocated_memory_size() const override;
 
 private:
-	virtual void* do_allocate(size_t bytes, size_t alignment);
-	virtual void do_deallocate(void* ptr, size_t bytes, size_t alignment);
-	virtual bool do_is_equal(const memory_resource& _That) const noexcept;
+    [[nodiscard]] void* do_allocate(size_t bytes, size_t alignment) override;
+	void do_deallocate(void* ptr, size_t bytes, size_t alignment) override;
+	[[nodiscard]] bool do_is_equal(const memory_resource& that) const noexcept override;
 
 	const U8 layers_count;
 	const U32 cells_count;
@@ -200,16 +152,18 @@ private:
 };
 
 
-// ==========================
-// ------ Implentation ------
-// ==========================
+// ============================
+// ------ Implementation ------
+// ============================
 
 
 template<U32 memory_size, U8 granularity>
 constexpr U32 StaticBinaryTreeManagedMemory<memory_size, granularity>::compute_cells_count()
 {
+    static_assert((memory_size / (8 * granularity)) > 1);
 	return memory_size / (8 * granularity);
 }
+
 
 template<U32 memory_size, U8 granularity>
 constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_max_layer()
@@ -221,7 +175,7 @@ constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_max_la
 template<U32 memory_size, U8 granularity>
 constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_allocation_size(size_t bytes, bit& is_zero)
 {
-	static constexpr U8 cell_bytes_pow = ALU::get_last_set_bit_index_no_zero(granularity);
+	constexpr U8 cell_bytes_pow = ALU::get_last_set_bit_index_no_zero(granularity);
 
 	// Make 'bytes_pow' such that 2^bytes_pow >= bytes
 	U8 bytes_pow = ALU::get_last_set_bit_index(bytes, is_zero);
@@ -240,22 +194,6 @@ constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_alloca
 	}
 
 	return cells_pow;
-}
-
-
-template<U32 memory_size, U8 granularity>
-constexpr U8* StaticBinaryTreeManagedMemory<memory_size, granularity>::get_cell_at(U32 address)
-{
-	U8* pos = memory_position;
-	U8 layer = 1;
-	while (address != 0) {
-		if (address & 0b1) {
-			pos += layer * granularity;
-		}
-		address >>= 1;
-		layer += 1;
-	}
-	return pos;
 }
 
 
@@ -293,7 +231,7 @@ template<U32 memory_size, U8 granularity>
 U32 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_allocated_memory_size() const
 {
 	// Parse through the tree and count the number of bytes allocated
-	// This is intented to be only used for testing purposes
+	// This is intended to be only used for testing purposes
 	return get_cell_allocated_size(&allocator_tree_root);
 }
 
@@ -318,7 +256,7 @@ void* StaticBinaryTreeManagedMemory<memory_size, granularity>::do_allocate(size_
 	}
 
 	// there is enough space in memory for this allocation, now perform it.
-	return allocator_tree_root.allocate_for(alloc_size);
+	return (void*) allocator_tree_root.allocate_for(alloc_size);
 }
 
 
@@ -365,7 +303,7 @@ void StaticBinaryTreeManagedMemory<memory_size, granularity>::do_deallocate(void
 template<U32 memory_size, U8 granularity>
 bool StaticBinaryTreeManagedMemory<memory_size, granularity>::do_is_equal(const std::pmr::memory_resource& that) const noexcept
 {
-	const _StaticBinaryTreeManagedMemoryBase* other = dynamic_cast<const _StaticBinaryTreeManagedMemoryBase*>(&that);
+	const auto* other = dynamic_cast<const StaticBinaryTreeManagedMemoryBase*>(&that);
 
 	if (other == nullptr) {
 		return false;
@@ -379,7 +317,7 @@ bool StaticBinaryTreeManagedMemory<memory_size, granularity>::do_is_equal(const 
 
 
 template<U8 layer>
-U8* TreeCell<layer>::allocate_for(U8 alloc_size)
+const U8* TreeCell<layer>::allocate_for(U8 alloc_size)
 {
 	if (ALU::compare_equal(alloc_size, layer)) {
 		// allocate for the size of this cell
@@ -389,8 +327,7 @@ U8* TreeCell<layer>::allocate_for(U8 alloc_size)
 	}
 	else {
 		// delegate the allocation to the children
-		U8* alloc_pos = nullptr;
-
+        const U8* alloc_pos;
 		if (((right_slots >> alloc_size) & 0b1) == 0) {
 			alloc_pos = right->allocate_for(alloc_size);
 		}
@@ -401,6 +338,39 @@ U8* TreeCell<layer>::allocate_for(U8 alloc_size)
 		update_alloc_slots();
 		return alloc_pos;
 	}
+}
+
+
+const U8* TreeCell<1>::allocate_for(U8 alloc_size)
+{
+    if (alloc_size == 0b1) {
+        // allocate the whole cell
+        alloc_slots = mask;
+
+        return memory_position;
+    }
+    else {
+        // simplification for the first layer, since there is no children here, and there must be a parent
+        if (right_slot == 0) {
+            // allocate the right cell
+            right_slot = 1;
+
+            if (alloc_slots == 0b10) {
+                alloc_slots = mask; // the left cell is also allocated, this cell is full
+            }
+            else {
+                alloc_slots = 0b10;
+            }
+
+            return memory_position;
+        }
+        else {
+            // allocate the left cell, which makes this cell filled
+            alloc_slots = mask;
+
+            return memory_position + cell_size / 2;
+        }
+    }
 }
 
 
@@ -420,6 +390,24 @@ void TreeCell<layer>::deallocate(U32 cell_index, U8 target_layer)
 		}
 		update_alloc_slots();
 	}
+}
+
+
+void TreeCell<1>::deallocate(U32 cell_index, U8 target_layer)
+{
+    if ((target_layer & 0b1) == 0b1) {
+        // we are at the cell we want to deallocate
+        alloc_slots = 0b00;
+    }
+    else {
+        // we want to deallocate a cell at the layer 0
+        if ((cell_index & 0b1) == 0b0) {
+            right_slot = 0; // deallocate the right cell
+        }
+
+        // deallocate the child cell, while taking into account that the other child cell might be still allocated
+        alloc_slots = right_slot << 1;
+    }
 }
 
 

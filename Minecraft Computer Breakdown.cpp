@@ -40,6 +40,10 @@ Intel SDE
 
 Description complète des ELF: https://www.youtube.com/watch?v=nC1U1LJQL8o
 
+
+Bon site de référence : https://sandpile.org/
+
+
 */
 
 #ifdef _MSC_VER

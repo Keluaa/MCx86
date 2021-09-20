@@ -1,6 +1,5 @@
 
 #include "registers.h"
-#include "exceptions.h"
 
 
 U32 Registers::read(const U8 register_id) const 
@@ -22,6 +21,7 @@ U32 Registers::read(const U8 register_id) const
 	}
 }
 
+
 U32 Registers::read_index(U8 register_index, OpSize size) const
 {
 	switch (size)
@@ -42,7 +42,8 @@ U32 Registers::read_index(U8 register_index, OpSize size) const
 		throw RegisterException("Wrong register size", register_index);
 	}
 }
-	
+
+
 void Registers::write(const U8 register_id, const U32 new_value, const U32 other_value)
 {
 	if (register_id < 8) {
@@ -66,6 +67,7 @@ void Registers::write(const U8 register_id, const U32 new_value, const U32 other
 		throw RegisterException("Wrong register id", register_id);
 	}
 }
+
 
 void Registers::write_index(U8 register_index, U32 value, OpSize size)
 {
@@ -92,20 +94,24 @@ void Registers::write_index(U8 register_index, U32 value, OpSize size)
 	}
 }
 
+
 void Registers::reset_general_purpose_registers()
 {
 	std::memset(registers, 0, 8);
 }
+
 
 void Registers::reset_segments_registers()
 {
 	std::memset(segments, 0, 6);
 }
 
+
 void Registers::reset_control_registers()
 {
 	std::memset(control_registers, 0, 4);
 }
+
 
 void Registers::complete_reset()
 {

@@ -1,1 +1,0 @@
-#define _OP_DEF(name, opcode, instruction_class) struct name : public instruction_class<opcode> { using instruction_class:instruction_class; };

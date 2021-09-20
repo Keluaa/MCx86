@@ -38,12 +38,12 @@ public:
 
 	void reset() { usages.clear(); }
 
-	const std::set<const char*>& get_usages() const { return usages; }
+	[[nodiscard]] const std::set<const char*>& get_usages() const { return usages; }
 
-	bool is_monitoring() const { return monitor; }
+	[[nodiscard]] bool is_monitoring() const { return monitor; }
 	void start_monitoring() { monitor = true; }
 	void stop_monitoring() { monitor = false; }
 };
 
 #define _USE_BRANCH_EVAL(macro) macro
-#define USE_BRANCH(monitor) _USE_BRANCH_EVAL(monitor.use_branch(__func__));
+#define USE_BRANCH(monitor) _USE_BRANCH_EVAL(monitor.use_branch(__func__))
