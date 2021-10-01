@@ -3,7 +3,7 @@
 #include <stack>
 
 #include "data_types.h"
-#include "registers.hpp"
+#include "registers.h"
 
 /*
 	First attempt at a stack
