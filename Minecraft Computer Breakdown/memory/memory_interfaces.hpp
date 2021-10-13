@@ -11,7 +11,7 @@ class ReadMemoryInterface
 protected:
 	U8* const bytes;
 
-	ReadMemoryInterface(U8* const bytes)
+	explicit ReadMemoryInterface(U8* const bytes)
 		: bytes(bytes)
 	{ }
 	
@@ -45,7 +45,7 @@ public:
 class ReadWriteMemoryInterface : public ReadMemoryInterface
 {
 protected:
-	ReadWriteMemoryInterface(U8* const bytes)
+	explicit ReadWriteMemoryInterface(U8* const bytes)
 		: ReadMemoryInterface(bytes)
 	{ }
 	
@@ -76,6 +76,7 @@ public:
 		}
 	}
 
+    [[nodiscard]]
 	U32 read_and_write(U32 address, U32 value, OpSize size)
 	{
 		// In the actual circuit implementation, this is done without temporary variables or anything else.

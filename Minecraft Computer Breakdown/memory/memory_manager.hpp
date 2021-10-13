@@ -15,7 +15,7 @@ class WrongMemoryAccess : public ExceptionWithMsg
 public:
 	WrongMemoryAccess(const char* msg, const U32 address) noexcept
 	{
-		const int buffer_size = strlen(msg) + 50;
+		const size_t buffer_size = strlen(msg) + 50;
 		char* buffer = new char[buffer_size];
 		snprintf(buffer, buffer_size, "Wrong memory access at 0x%x: %s", address, msg);
 		this->msg = buffer;
@@ -28,7 +28,7 @@ class BadSelector : public ExceptionWithMsg
 public:
 	BadSelector(const char* msg, const U16 segment) noexcept
 	{
-		const int buffer_size = strlen(msg) + 20;
+		const size_t buffer_size = strlen(msg) + 20;
 		char* buffer = new char[buffer_size];
 		snprintf(buffer, buffer_size, "Segment %d: %s", segment, msg);
 		this->msg = buffer;
@@ -36,7 +36,7 @@ public:
 	
 	BadSelector(const char* msg, const U16 segment, const U32 size, const U32 offset) noexcept
 	{
-		const int buffer_size = strlen(msg) + 80;
+		const size_t buffer_size = strlen(msg) + 80;
 		char* buffer = new char[buffer_size];
 		snprintf(buffer, buffer_size, "Segment %d (size: %d), offset %d: %s", segment, size, offset, msg);
 		this->msg = buffer;
@@ -102,10 +102,10 @@ struct DescriptorTable
 };
 
 
-template<typename ROM_SIZE, typename RAM_SIZE, typename STACK_SIZE>
+template<U32 ROM_SIZE, U32 RAM_SIZE, U32 STACK_SIZE>
 class Memory
 {
-	U32 text_pos, text_size, text_end;
+	U32 text_pos, text_end;
 	U32 rom_pos, rom_end; 
 	U32 ram_pos, ram_end;
 	U32 stack_pos, stack_end;
@@ -125,14 +125,14 @@ public:
 	Memory(U32 text_pos, U32 text_size,
 		   U32 rom_pos, U32 rom_size, U8* rom_bytes,
 		   U32 ram_pos, U32 ram_size, U8* ram_bytes)
-		: text_pos(text_pos), text_size(text_size), text_end(text_pos + text_size),
+		: text_pos(text_pos), text_end(text_pos + text_size),
 		  rom_pos(rom_pos), rom_end(rom_pos + ROM_SIZE),
 		  ram_pos(ram_pos), ram_end(ram_pos + RAM_SIZE),
 		  stack_pos(ram_end), stack_end(stack_pos + STACK_SIZE),
 		  rom_bytes(rom_bytes), ram_bytes(ram_bytes),
 		  stack_bytes(std::make_unique<U8>(STACK_SIZE)),
-		  rom(rom_bytes.get()),
-		  ram(ram_bytes.get()),
+		  rom(rom_bytes),
+		  ram(ram_bytes),
 		  stack(stack_bytes.get())
 	{
 		if (rom_size > ROM_SIZE) {
@@ -144,23 +144,45 @@ public:
 		}
 	}
 	
-	U8* physical_at(U32 address) const
+	[[nodiscard]]
+    U8* physical_at(U32 address) const
 	{
 		// All of those checks can be parallelized
 		if (address >= text_pos && address < text_end) {
 			throw WrongMemoryAccess("Text is read-only.", address);
 		}
 		else if (address >= rom_pos && address < rom_end) {
-			return rom_bytes + (address - rom_pos);
+			return rom_bytes.get() + (address - rom_pos);
 		}
 		else if (address >= ram_pos && address < ram_end) {
-			return ram_bytes + (address - ram_pos);
+			return ram_bytes.get() + (address - ram_pos);
 		}
 		else if (address >= stack_pos && address < stack_end) {
-			return stack_bytes + (address - stack_pos);
+			return stack_bytes.get() + (address - stack_pos);
 		}
 		else {
 			throw WrongMemoryAccess("Address out of bounds.", address);
 		}
 	}
+
+    [[nodiscard]]
+    U32 at(U32 address, OpSize size) const
+    {
+        // All of those checks can be parallelized
+        if (address >= text_pos && address < text_end) {
+            throw WrongMemoryAccess("Text is read-only.", address);
+        }
+        else if (address >= rom_pos && address < rom_end) {
+            return rom.read(address - rom_pos, size);
+        }
+        else if (address >= ram_pos && address < ram_end) {
+            return ram.read(address - ram_pos, size);
+        }
+        else if (address >= stack_pos && address < stack_end) {
+            return stack.read(address - stack_pos);
+        }
+        else {
+            throw WrongMemoryAccess("Address out of bounds.", address);
+        }
+    }
 };

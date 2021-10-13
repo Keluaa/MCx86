@@ -1,7 +1,7 @@
 
 #include "doctest.h"
 
-#include "RAM.hpp"
+#include "memory/RAM.hpp"
 
 
 TEST_SUITE("RAM_alloc")

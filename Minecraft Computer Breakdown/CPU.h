@@ -6,9 +6,9 @@
 #include "ALU.hpp"
 #include "instructions.h"
 #include "registers.h"
-#include "RAM.hpp"
-#include "ROM.h"
-#include "stack.h"
+#include "memory/RAM.hpp"
+#include "memory/ROM.hpp"
+#include "memory/stack.hpp"
 #include "exceptions.h"
 #include "interrupts.h"
 

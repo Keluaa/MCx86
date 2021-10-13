@@ -11,11 +11,7 @@ set(HEADER_FILES
         IA-32_mapping.h
         instructions.h
         interrupts.h
-        memory_manager.hpp
         registers.h
-        ROM.h
-        RAM.hpp
-        stack.h
         StaticBinaryTreeManagedMemory.hpp)
 
 set(SOURCE_FILES

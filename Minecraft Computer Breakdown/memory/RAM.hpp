@@ -20,7 +20,7 @@ private:
 	std::pmr::polymorphic_allocator<U8> allocator;
 
 public:
-	RAM(U8* const bytes) 
+	explicit RAM(U8* const bytes)
 		: ReadWriteMemoryInterface(bytes),
 		  memory(bytes), allocator(&memory)
 	{ }
