@@ -271,7 +271,7 @@ void StaticBinaryTreeManagedMemory<memory_size, granularity>::do_deallocate(void
 
 	// find the cell which was allocated for this pointer
 
-	// Get the 'true' address in the memory we manage, in order to check if it is a valid allocated pointer.
+	// Get the 'true' address in the memory we manage, in order to check if it is a correctly allocated pointer.
 	// Here we cast to U64 to not have any precision loss, but we use 32-bit addressing in the circuit implementation.
 	const U32 effective_address = U32(U64(ptr) - U64(memory_position)); 
 	if (ALU::check_different_than_zero(ALU::and_(effective_address, PTR_MASK))) {
