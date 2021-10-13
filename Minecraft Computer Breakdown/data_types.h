@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 typedef bool bit;
 
@@ -11,3 +11,5 @@ typedef char I8;
 typedef short I16;
 typedef int I32;
 typedef long long I64; // should not be used
+
+// TODO : add some static_assert(sizeof(U32) == 4)

@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <cstdint>
 
+#include "memory/memory_manager.hpp"
+
 
 void load_memory_contents(std::filebuf& memory_file, uint32_t rom_start, uint32_t ram_start)
 {

@@ -3,10 +3,11 @@
 #include <memory>
 #include <vector>
 
-#include "data_types.h"
-#include "exceptions.h"
+#include "../data_types.h"
+#include "../exceptions.h"
 #include "RAM.hpp"
-#include "ROM.h"
+#include "ROM.hpp"
+#include "stack.hpp"
 
 
 class WrongMemoryAccess : public ExceptionWithMsg
@@ -115,6 +116,7 @@ class Memory
 	
 	ROM<ROM_SIZE> rom;
 	RAM<RAM_SIZE, U32> ram;
+	Stack<STACK_SIZE> stack;
 	
 public:
 	/**
@@ -130,7 +132,8 @@ public:
 		  rom_bytes(rom_bytes), ram_bytes(ram_bytes),
 		  stack_bytes(std::make_unique<U8>(STACK_SIZE)),
 		  rom(rom_bytes.get()),
-		  ram(ram_bytes.get())
+		  ram(ram_bytes.get()),
+		  stack(stack_bytes.get())
 	{
 		if (rom_size > ROM_SIZE) {
 			std::cout << "Error: given ROM size (" << rom_size << ") is greater than the maximum one (" << ROM_SIZE << ").\n";

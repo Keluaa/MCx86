@@ -1,50 +1,21 @@
 ﻿#pragma once
 
-#include <memory>
-#include <exception>
-#include <memory_resource>
-#include <cassert>
+#include <stdexcept>
 
-#include "data_types.h"
-#include "instructions.h"
-
-#include "ALU.hpp"
-#include "StaticBinaryTreeManagedMemory.hpp"
+#include "../data_types.h"
+#include "../instructions.h"
 
 
-template<U32 N, typename Granularity>
-class RAM
+class ReadMemoryInterface
 {
-	static_assert(std::is_integral<Granularity>::value);
-	static_assert(N % 8 == 0);
-
-private:
+protected:
 	U8* const bytes;
-	StaticBinaryTreeManagedMemory<N, sizeof(Granularity)> memory;
-	std::pmr::polymorphic_allocator<U8> allocator;
 
-public:
-	RAM(U8* bytes) : bytes(bytes), memory(bytes), allocator(&memory)
+	ReadMemoryInterface(U8* const bytes)
+		: bytes(bytes)
 	{ }
-
-	template<class T, class... Args>
-	T* allocate(Args&&... args)
-	{
-		static_assert(std::is_pointer<T*>::value);
-
-		T* t = (T*) allocator.allocate(sizeof(T));
-		if (t != nullptr) {
-			allocator.construct(t, args...);
-		}
-		return t;
-	};
-
-	template<class T>
-	void deallocate(T* const ptr)
-	{
-		allocator.deallocate((U8*) ptr, sizeof(T));
-	}
-
+	
+public:
 	[[nodiscard]]
 	U32 read(U32 address, OpSize size) const
 	{
@@ -68,7 +39,17 @@ public:
 			throw std::logic_error("Wrong memory size");
 		}
 	}
+};
 
+
+class ReadWriteMemoryInterface : public ReadMemoryInterface
+{
+protected:
+	ReadWriteMemoryInterface(U8* const bytes)
+		: ReadMemoryInterface(bytes)
+	{ }
+	
+public:
 	void write(U32 address, U32 value, OpSize size)
 	{
 		// TODO : maybe optimize this with some packed assignments
@@ -102,10 +83,5 @@ public:
 		U32 tmp = read(address, size);
 		write(address, value, size);
 		return tmp;
-	}
-
-	const StaticBinaryTreeManagedMemory<N, sizeof(Granularity)>& get_memory_manager() const 
-	{
-		return memory;
 	}
 };
