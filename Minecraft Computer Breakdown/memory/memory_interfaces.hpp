@@ -1,76 +1,55 @@
 ﻿#pragma once
 
-#include <memory>
-#include <exception>
-#include <memory_resource>
-#include <cassert>
+#include <stdexcept>
 
-#include "data_types.h"
-#include "instructions.h"
-
-#include "ALU.hpp"
-#include "StaticBinaryTreeManagedMemory.hpp"
+#include "../data_types.h"
+#include "../instructions.h"
 
 
-template<U32 N, typename Granularity>
-class RAM
+class ReadMemoryInterface
 {
-	static_assert(std::is_integral<Granularity>::value);
-	static_assert(N % 8 == 0);
+protected:
+	U8* const bytes;
 
-private:
-    U8* const bytes;
-	StaticBinaryTreeManagedMemory<N, sizeof(Granularity)> memory;
-	std::pmr::polymorphic_allocator<U8> allocator;
-
+	ReadMemoryInterface(U8* const bytes)
+		: bytes(bytes)
+	{ }
+	
 public:
-    explicit RAM(U8* bytes) : bytes(bytes), memory(bytes), allocator(&memory)
-    { }
-
-	template<class T, class... Args>
-	T* allocate(Args&&... args)
-	{
-		static_assert(std::is_pointer<T*>::value);
-
-		T* t = (T*) allocator.allocate(sizeof(T));
-		if (t != nullptr) {
-			allocator.construct(t, args...);
-		}
-		return t;
-	};
-
-	template<class T>
-	void deallocate(T* const ptr)
-	{
-		allocator.deallocate((U8*) ptr, sizeof(T));
-	}
-
-  [[nodiscard]] constexpr U8* get_bytes() const { return bytes; }
-
 	[[nodiscard]]
-  U32 read(U32 address, OpSize size) const
+	U32 read(U32 address, OpSize size) const
 	{
 		// TODO : bounds check if N < max_U32
 		switch (size)
 		{
 		case OpSize::B:
 			return bytes[address];
-                
+			
 		case OpSize::W:
 			return (bytes[address + 1] << 8) | 
 					bytes[address];
-                
+			
 		case OpSize::DW:
 			return (bytes[address + 3] << 24) |
 				   (bytes[address + 2] << 16) |
 				   (bytes[address + 1] <<  8) |
 				    bytes[address];
-        
+			
 		default:
 			throw std::logic_error("Wrong memory size");
 		}
 	}
+};
 
+
+class ReadWriteMemoryInterface : public ReadMemoryInterface
+{
+protected:
+	ReadWriteMemoryInterface(U8* const bytes)
+		: ReadMemoryInterface(bytes)
+	{ }
+	
+public:
 	void write(U32 address, U32 value, OpSize size)
 	{
 		// TODO : maybe optimize this with some packed assignments
@@ -79,19 +58,19 @@ public:
 		case OpSize::B:
 			bytes[address] = value & 0xFF;
 			break;
-        
+			
 		case OpSize::W:
 			bytes[address + 1] = (value & 0xFF00) >> 8;
 			bytes[address + 0] = (value & 0x00FF) >> 0;
 			break;
-        
+			
 		case OpSize::DW:
 			bytes[address + 3] = (value & 0xFF000000) >> 24;
 			bytes[address + 2] = (value & 0x00FF0000) >> 16;
 			bytes[address + 1] = (value & 0x0000FF00) >>  8;
 			bytes[address + 0] = (value & 0x000000FF) >>  0;
 			break;
-        
+			
 		default:
 			throw std::logic_error("Wrong memory size");
 		}
@@ -104,10 +83,5 @@ public:
 		U32 tmp = read(address, size);
 		write(address, value, size);
 		return tmp;
-	}
-
-	const StaticBinaryTreeManagedMemory<N, sizeof(Granularity)>& get_memory_manager() const 
-	{
-		return memory;
 	}
 };

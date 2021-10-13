@@ -1,21 +1,20 @@
-#pragma once
+﻿#pragma once
 
 #include "data_types.h"
 
 
-template<typename CELL_SIZE>
+template<U32 SIZE>
 struct ROM
 {
 private:
-    const U32 size;
-    const CELL_SIZE* const bytes;
+	U8* const bytes;
 
 public:
-    ROM(const CELL_SIZE* const bytes, U32 size)
-        : size(size), bytes(bytes)
-    { }
+	ROM(U8* bytes)
+		: bytes(bytes)
+	{ }
 
-	CELL_SIZE read(U32 address) const
+	constexpr U8 read(U32 address) const
 	{
 		return bytes[address];
 	}
