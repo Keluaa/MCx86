@@ -38,7 +38,7 @@ public:
 class BadInstruction : public ExceptionWithMsg
 {
 public:
-	BadInstruction(const char* msg, const int pos) noexcept
+	BadInstruction(const char* msg, const U32 pos) noexcept
 	{
 		const size_t buffer_size = strlen(msg) + 20;
 		char* buffer = new char[buffer_size];
@@ -51,7 +51,7 @@ public:
 class NotImplemented : public ExceptionWithMsg
 {
 public:
-	NotImplemented(const U16 opcode, const int pos, const char* msg) noexcept
+	NotImplemented(const U16 opcode, const U32 pos, const char* msg) noexcept
 	{
 	    const size_t buffer_size = strlen(msg) + 50;
 		char* buffer = new char[buffer_size];
@@ -64,7 +64,7 @@ public:
 class UnknownInstruction : public ExceptionWithMsg
 {
 public:
-	UnknownInstruction(const char* msg, const U16 opcode, const int pos)
+	UnknownInstruction(const char* msg, const U16 opcode, const U32 pos)
 	{
 		const size_t buffer_size = strlen(msg) + 20;
 		char* buffer = new char[buffer_size];
@@ -77,7 +77,7 @@ public:
 class ProcessorException : public ExceptionWithMsg
 {
 public:
-	ProcessorException(const char* mnemonic, const int pos, U8 code = -1)
+	ProcessorException(const char* mnemonic, const U32 pos, U8 code = -1)
 	{
 		const size_t buffer_size = strlen(mnemonic) + 30;
 		char* buffer = new char[buffer_size];
@@ -89,11 +89,10 @@ public:
 
 inline void print_warning(const char* msg, const char* function, int position, const char* file)
 {
-	static bool arg = true;
 	fprintf(stderr, "Warning in file %s at line %d in function '%s': %s\n", file, position, function, msg);
 }
 
 
-#define _WARNING_EVAL_2(msg, file, line, func) { static bool $____warning_printed_flag_ ## line = false; if (!$____warning_printed_flag_ ## line) { print_warning(msg, func, line, file); $____warning_printed_flag_ ## line = true; } }
-#define _WARNING_EVAL_1(msg, file, line, func) _WARNING_EVAL_2(msg, file, line, func)
-#define WARNING(msg) _WARNING_EVAL_1(msg, __ ## FILE__, __ ## LINE__, __ ## func__) false
+#define WARNING_EVAL_2(msg, file, line, func) { static bool $_warning_printed_flag_ ## line = false; if (!$_warning_printed_flag_ ## line) { print_warning(msg, func, line, file); $_warning_printed_flag_ ## line = true; } }
+#define WARNING_EVAL_1(msg, file, line, func) WARNING_EVAL_2(msg, file, line, func)
+#define WARNING(msg) WARNING_EVAL_1(msg, __ ## FILE__, __ ## LINE__, __ ## func__) false

@@ -27,6 +27,11 @@ On veut un raw binairy, pour faire ca, voir:
  - mais pas pour les libairies du systeme, la il va falloir du dynamic linking (arg non)
 
 Voir Bochs, un projet similaire d'emulation de processeur x86
+-> peut-être pas adapté à ce que je veux faire
+
+Voir celui-ci (et ses références):
+https://uob-hpc.github.io/SimEng/
+
 
 Il me FAUT un os? Voir:
 https://wiki.osdev.org/Main_Page

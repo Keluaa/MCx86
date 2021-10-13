@@ -12,16 +12,18 @@ set(HEADER_FILES
         instructions.h
         interrupts.h
         memory_manager.hpp
-        RAM.hpp
         registers.h
         ROM.h
+        RAM.hpp
         stack.h
         StaticBinaryTreeManagedMemory.hpp)
 
 set(SOURCE_FILES
         CPU.cpp
+        CPU_instructions.cpp
         IA-32_mapping.cpp
         instructions.cpp
-        registers.cpp)
+        registers.cpp
+        load_program.cpp CPU_non_arithmetic_instructions.cpp CPU_state_machine_instructions.cpp)
 
 add_library(Minecraft_Computer_Breakdown_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

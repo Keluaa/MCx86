@@ -19,13 +19,13 @@ class RAM
 	static_assert(N % 8 == 0);
 
 private:
-	U8 bytes[N] { };
+    U8* bytes;
 	StaticBinaryTreeManagedMemory<N, sizeof(Granularity)> memory;
 	std::pmr::polymorphic_allocator<U8> allocator;
 
 public:
-	RAM() : memory(bytes), allocator(&memory)
-	{ }
+    explicit RAM(U8* bytes) : bytes(bytes), memory(bytes), allocator(&memory)
+    { }
 
 	template<class T, class... Args>
 	T* allocate(Args&&... args)
@@ -45,6 +45,8 @@ public:
 		allocator.deallocate((U8*) ptr, sizeof(T));
 	}
 
+    [[nodiscard]] constexpr U8* get_bytes() const { return bytes; }
+
 	[[nodiscard]] U32 read(U32 address, OpSize size) const
 	{
 		// TODO : bounds check if N < max_U32
@@ -52,13 +54,16 @@ public:
 		{
 		case OpSize::B:
 			return bytes[address];
+
 		case OpSize::W:
 			return (bytes[address + 1] << 8) | bytes[address];
+
 		case OpSize::DW:
 			return (bytes[address + 3] << 24) |
 				   (bytes[address + 2] << 16) |
-				   (bytes[address + 1] << 8) |
+				   (bytes[address + 1] <<  8) |
 				    bytes[address];
+
 		default:
 			throw std::logic_error("Wrong memory size");
 		}
@@ -72,16 +77,19 @@ public:
 		case OpSize::B:
 			bytes[address] = value & 0xFF;
 			break;
+
 		case OpSize::W:
 			bytes[address + 1] = (value & 0xFF00) >> 8;
 			bytes[address + 0] = (value & 0x00FF) >> 0;
 			break;
+
 		case OpSize::DW:
 			bytes[address + 3] = (value & 0xFF000000) >> 24;
 			bytes[address + 2] = (value & 0x00FF0000) >> 16;
 			bytes[address + 1] = (value & 0x0000FF00) >> 8;
 			bytes[address + 0] = (value & 0x000000FF) >> 0;
 			break;
+
 		default:
 			throw std::logic_error("Wrong memory size");
 		}

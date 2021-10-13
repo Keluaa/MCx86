@@ -8,6 +8,7 @@
 #include "registers.h"
 #include "RAM.hpp"
 #include "ROM.h"
+#include "stack.h"
 #include "exceptions.h"
 #include "interrupts.h"
 
@@ -16,11 +17,9 @@ class CPU
 {
 	Registers registers;
 	RAM<4096, U32> ram;
-	ROM<U32, 512> rom;
-    RAM<128, U8> io;
-	
-	// stack, supposedly stored at the segment pointed by the SS register
-	std::stack<U32> stack; // TODO : replace this with a low level implementation
+	ROM<U8> rom;
+    RAM<128, U8> io = RAM<128, U8>(new U8[128]{});
+    Stack stack;
 
 	Interrupts::InterruptDescriptorTable<64>* interruptsTable;
 
@@ -49,15 +48,23 @@ class CPU
 	void update_adjust_flag(EFLAGS& flags, U32 op1, U32 op2);
 	void update_status_flags(EFLAGS& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry = 0);
 
+    void throw_NYI(const char* msg) const
+    {
+        throw NotImplemented(currentInstruction->opcode, registers.EIP, msg);
+    }
+
+    void throw_exception(const Interrupts::Interrupt& interrupt) const
+    {
+        throw ProcessorException(interrupt.mnemonic, registers.EIP, interrupt.vector);
+    }
+
 public:
-	CPU(const Inst** instructions, const U32 count);
+	CPU(const U8* const ROM_bytes, U8* RAM_bytes, U32 stack_size, const Inst** instructions, const U32 count);
 
 	~CPU()
 	{
-		for (U32 i = 0; i < instructions_count; i++) {
-			delete instructions[i];
-		}
-		delete[] instructions;
+        delete stack.get_bytes();
+        delete io.get_bytes();
 	}
 
 	void switch_protected_mode(bit protected_ = true);
