@@ -6,6 +6,9 @@
 #include "../instructions.h"
 
 
+namespace Mem
+{
+
 class ReadMemoryInterface
 {
 protected:
@@ -85,4 +88,6 @@ public:
 		write(address, value, size);
 		return tmp;
 	}
+};
+
 };

@@ -1,10 +1,13 @@
-#pragma once
+﻿#pragma once
 
 #include <memory_resource>
 
-#include "data_types.h"
-#include "ALU.hpp"
+#include "../data_types.h"
+#include "../ALU.hpp"
 
+
+namespace Mem
+{
 
 /**
  * This static allocator structure is limited to 2^16 cells (15 layers)
@@ -423,3 +426,5 @@ void TreeCell<layer>::update_alloc_slots()
 	// the new useful bit of 'alloc_slots' is and OR on the previous last bits of the children cells
 	alloc_slots |= ALU::or_(right_slots & (0b1 << (layer - 1)), left_slots & (0b1 << (layer - 1))) << 1;
 }
+
+};

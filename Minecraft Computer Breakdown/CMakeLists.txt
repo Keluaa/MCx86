@@ -1,4 +1,4 @@
-
+﻿
 project(Minecraft_Computer_Breakdown)
 
 set(HEADER_FILES
@@ -12,7 +12,14 @@ set(HEADER_FILES
         instructions.h
         interrupts.h
         registers.h
-        StaticBinaryTreeManagedMemory.hpp)
+		memory/exceptions.hpp
+		memory/memory_interfaces.hpp
+		memory/memory_manager.hpp
+		memory/descriptor_table.hpp
+		memory/RAM.hpp
+		memory/ROM.hpp
+		memory/stack.hpp
+		memory/StaticBinaryTreeManagedMemory.hpp)
 
 set(SOURCE_FILES
         CPU.cpp
@@ -20,6 +27,8 @@ set(SOURCE_FILES
         IA-32_mapping.cpp
         instructions.cpp
         registers.cpp
-        load_program.cpp CPU_non_arithmetic_instructions.cpp CPU_state_machine_instructions.cpp)
+        load_program.cpp 
+		CPU_non_arithmetic_instructions.cpp 
+		CPU_state_machine_instructions.cpp)
 
 add_library(Minecraft_Computer_Breakdown_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

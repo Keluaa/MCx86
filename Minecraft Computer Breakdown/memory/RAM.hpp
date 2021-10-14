@@ -6,8 +6,11 @@
 #include "memory_interfaces.hpp"
 
 #include "../ALU.hpp"
-#include "../StaticBinaryTreeManagedMemory.hpp"
+#include "StaticBinaryTreeManagedMemory.hpp"
 
+
+namespace Mem
+{
 
 template<U32 N, typename Granularity>
 class RAM : public ReadWriteMemoryInterface
@@ -47,4 +50,6 @@ public:
 	{
 		return memory;
 	}
+};
+
 };
