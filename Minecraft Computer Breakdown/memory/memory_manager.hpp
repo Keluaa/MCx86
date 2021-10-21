@@ -13,10 +13,10 @@
 namespace Mem
 {
 
-// 2MB of ROM, 4MB of RAM, 2MB of stack
+// 2MB of ROM, 1MB of RAM, 1MB of stack
 const U32 ROM_SIZE = 0x200000;
-const U32 RAM_SIZE = 0x400000;
-const U32 STACK_SIZE = 0x200000;
+const U32 RAM_SIZE = 0x100000;
+const U32 STACK_SIZE = 0x100000;
 
 class Memory
 {
@@ -33,7 +33,7 @@ class Memory
 	RAM<RAM_SIZE, U32> ram;
 	Stack<STACK_SIZE> stack;
 	
-	const std::vector<const Inst> instructions;
+	const std::vector<Inst> instructions;
 	
 public:
 	/**
@@ -42,7 +42,7 @@ public:
 	 */
 	Memory(U32 text_pos, U32 text_size,
 		   U32 rom_pos, U8* rom_bytes, U8* ram_bytes,
-		   std::vector<const Inst>& instructions)
+		   std::vector<Inst>& instructions)
 		: text_pos(text_pos), text_end(text_pos + text_size),
 		  rom_pos(rom_pos), rom_end(rom_pos + ROM_SIZE),
 		  ram_pos(rom_end), ram_end(ram_pos + RAM_SIZE),
@@ -53,19 +53,16 @@ public:
 		  ram(ram_bytes),
 		  stack(stack_bytes.get()),
 		  instructions(std::move(instructions))
-	{
-		if (rom_size > ROM_SIZE) {
-			std::cout << "Error: given ROM size (" << rom_size << ") is greater than the maximum one (" << ROM_SIZE << ").\n";
-		}
-		
-		if (ram_size > RAM_SIZE) {
-			std::cout << "Error: given RAM size (" << ram_size << ") is greater than the maximum one (" << RAM_SIZE << ").\n";
-		}
-	}
+	{ }
 	
 	Memory(const Memory&) = delete;
 	Memory& operator=(const Memory&) = delete;
-	
+
+    ROM<ROM_SIZE>* get_ROM()                    { return &rom; }
+    RAM<RAM_SIZE, U32>* get_RAM()               { return &ram; }
+    Stack<STACK_SIZE>* get_stack()              { return &stack; }
+    const std::vector<Inst>* get_instructions() { return &instructions; }
+
 	[[nodiscard]]
     U8* physical_at(U32 address) const
 	{
@@ -88,11 +85,11 @@ public:
 	}
 
     [[nodiscard]]
-    U32 at(U32 address, OpSize size) const
+    U32 read(U32 address, OpSize size) const
     {
         // All of those checks can be parallelized using bit checks at the right places
         if (address >= text_pos && address < text_end) {
-            throw WrongMemoryAccess("Text is read-only.", address);
+            throw WrongMemoryAccess("Text cannot be read.", address);
         }
         else if (address >= rom_pos && address < rom_end) {
             return rom.read(address - rom_pos, size);
@@ -101,7 +98,27 @@ public:
             return ram.read(address - ram_pos, size);
         }
         else if (address >= stack_pos && address < stack_end) {
-            return stack.read(address - stack_pos);
+            return stack.read(address - stack_pos, size);
+        }
+        else {
+            throw WrongMemoryAccess("Address out of bounds.", address);
+        }
+    }
+
+    void write(U32 address, U32 value, OpSize size)
+    {
+        // All of those checks can be parallelized using bit checks at the right places
+        if (address >= text_pos && address < text_end) {
+            throw WrongMemoryAccess("Text cannot be written to.", address);
+        }
+        else if (address >= rom_pos && address < rom_end) {
+            throw WrongMemoryAccess("ROM is read-only.", address);
+        }
+        else if (address >= ram_pos && address < ram_end) {
+            ram.write(address - ram_pos, value, size);
+        }
+        else if (address >= stack_pos && address < stack_end) {
+            stack.write(address - stack_pos, value, size);
         }
         else {
             throw WrongMemoryAccess("Address out of bounds.", address);
@@ -109,4 +126,4 @@ public:
     }
 };
 
-};
+}

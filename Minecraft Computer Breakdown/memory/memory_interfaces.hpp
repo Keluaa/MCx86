@@ -17,7 +17,7 @@ protected:
 	explicit ReadMemoryInterface(U8* const bytes)
 		: bytes(bytes)
 	{ }
-	
+
 public:
 	[[nodiscard]]
 	U32 read(U32 address, OpSize size) const
@@ -42,6 +42,9 @@ public:
 			throw std::logic_error("Wrong memory size");
 		}
 	}
+
+    [[nodiscard]]
+    U8* get_bytes() const { return bytes; }
 };
 
 
@@ -90,4 +93,4 @@ public:
 	}
 };
 
-};
+}

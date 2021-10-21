@@ -19,7 +19,7 @@ set(HEADER_FILES
 		memory/RAM.hpp
 		memory/ROM.hpp
 		memory/stack.hpp
-		memory/StaticBinaryTreeManagedMemory.hpp)
+		memory/StaticBinaryTreeManagedMemory.hpp memory/buffer.hpp)
 
 set(SOURCE_FILES
         CPU.cpp

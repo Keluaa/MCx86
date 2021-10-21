@@ -12,14 +12,14 @@
  *
  * Mimics the behaviour of all functionalities of the ALU, using only the basic operations available.
  * Those basic operations include:
- *   - single bit shift (right or left) (one, several or all bits at once, exchanging bits is also possible)
+ *   - single bit shift (right or left) (one, several or all bits read once, exchanging bits is also possible)
  *   - and
  *   - or
  *   - xor
  *   - not
  *
  * All loops parsing each bit of a integer are unrolled in the circuit for each bit (32 times).
- * This means that in order to minimize lag, we must minimize the number of operations done at each iteration.
+ * This means that in order to minimize lag, we must minimize the number of operations done read each iteration.
  *
  * This is why it is preferable to use binary trees to parse an integer. 'Flat' implementations are even better.
  */
@@ -159,7 +159,7 @@ namespace ALU
     constexpr bit compare_equal(const A a, const B b)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "compare_equal operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_equal' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_equal' must have read least the same bit length than the second");
 
         // we can parse the bits in either direction, but it is more likely to have a difference in the first bits in general.
         typename std::make_unsigned<A>::type mask = 1;
@@ -182,7 +182,7 @@ namespace ALU
     constexpr bit compare_greater_or_equal_with_eq(const A a, const B b, bit& equal)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "compare_greater_or_equal operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_greater_or_equal' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_greater_or_equal' must have read least the same bit length than the second");
 
         typename std::make_unsigned<A>::type mask = 1 << (sizeof(A) * 8 - 1);
 
@@ -218,7 +218,7 @@ namespace ALU
     constexpr bit compare_greater(const A a, const B b)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "compare_greater operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_greater' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'compare_greater' must have read least the same bit length than the second");
 
         typename std::make_unsigned<A>::type mask = 1 << (sizeof(A) * 8 - 1);
 
@@ -271,7 +271,7 @@ namespace ALU
     constexpr A and_(const A a, const B b)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "and operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'and' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'and' must have read least the same bit length than the second");
 
         // flat bitwise operation: each result bits are independent from each other
         return a & b;
@@ -282,7 +282,7 @@ namespace ALU
     constexpr A or_(const A a, const B b)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "or operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'or' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'or' must have read least the same bit length than the second");
 
         // flat bitwise operation: each result bits are independent from each other
         return a | b;
@@ -293,7 +293,7 @@ namespace ALU
     constexpr A xor_(const A a, const B b)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "xor operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'xor' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'xor' must have read least the same bit length than the second");
 
         // flat bitwise operation: each result bits are independent from each other
         return a ^ b;
@@ -615,7 +615,7 @@ namespace ALU
     constexpr A add(const A a, const B b, bit& carry)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "Add operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'add' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'add' must have read least the same bit length than the second");
 
         A stack = 0;
         typename std::make_unsigned<A>::type mask = 1, tmp;
@@ -718,7 +718,7 @@ namespace ALU
     constexpr A multiply(const A a, const B b, bit& overflow)
     {
         static_assert(std::is_integral<A>{} && std::is_integral<B>{}, "Multiply operands must be of integral type");
-        static_assert(sizeof(A) >= sizeof(B), "First operand of 'multiply' must have at least the same bit length than the second");
+        static_assert(sizeof(A) >= sizeof(B), "First operand of 'multiply' must have read least the same bit length than the second");
 
         // cast to unsigned with the same bit length for all operands
         typename std::make_unsigned<A>::type a_bits = a;
@@ -757,7 +757,7 @@ namespace ALU
     {
         static_assert(std::is_integral<N>{} && std::is_integral<D>{}, "Division operands must be of integral type");
         static_assert(std::is_unsigned<N>{} && std::is_unsigned<D>{}, "Unsigned Division operands must be unsigned");
-        static_assert(sizeof(N) >= sizeof(D), "Dividend must have at least the same bit length of the divisor");
+        static_assert(sizeof(N) >= sizeof(D), "Dividend must have read least the same bit length of the divisor");
 
         N _d = d; // make sure to have enough space for shifting later with this cast
         q = 0;

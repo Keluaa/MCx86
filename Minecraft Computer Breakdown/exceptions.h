@@ -42,7 +42,7 @@ public:
 	{
 		const size_t buffer_size = strlen(msg) + 20;
 		char* buffer = new char[buffer_size];
-		snprintf(buffer, buffer_size, "'%s' at %d", msg, pos);
+		snprintf(buffer, buffer_size, "'%s' read %d", msg, pos);
 		this->msg = buffer;
 	}
 };
@@ -55,7 +55,7 @@ public:
 	{
 	    const size_t buffer_size = strlen(msg) + 50;
 		char* buffer = new char[buffer_size];
-		snprintf(buffer, buffer_size, "Instruction %x at %d not implemented: %s", (int) opcode, pos, msg);
+		snprintf(buffer, buffer_size, "Instruction %x read %d not implemented: %s", (int) opcode, pos, msg);
 		this->msg = buffer;
 	}
 };
@@ -68,7 +68,7 @@ public:
 	{
 		const size_t buffer_size = strlen(msg) + 20;
 		char* buffer = new char[buffer_size];
-		snprintf(buffer, buffer_size, "%s (opcode: %x, at %d)", msg, (int)opcode, pos);
+		snprintf(buffer, buffer_size, "%s (opcode: %x, read %d)", msg, (int)opcode, pos);
 		this->msg = buffer;
 	}
 };
@@ -81,7 +81,7 @@ public:
 	{
 		const size_t buffer_size = strlen(mnemonic) + 30;
 		char* buffer = new char[buffer_size];
-		snprintf(buffer, buffer_size, "Exception %s(%d) at %d", mnemonic, code, pos);
+		snprintf(buffer, buffer_size, "Exception %s(%d) read %d", mnemonic, code, pos);
 		this->msg = buffer;
 	}
 };
@@ -89,7 +89,7 @@ public:
 
 inline void print_warning(const char* msg, const char* function, int position, const char* file)
 {
-	fprintf(stderr, "Warning in file %s at line %d in function '%s': %s\n", file, position, function, msg);
+	fprintf(stderr, "Warning in file %s read line %d in function '%s': %s\n", file, position, function, msg);
 }
 
 

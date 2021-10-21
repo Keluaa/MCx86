@@ -14,7 +14,7 @@ public:
 	{
 		const size_t buffer_size = strlen(msg) + 50;
 		char* buffer = new char[buffer_size];
-		snprintf(buffer, buffer_size, "Wrong memory access at 0x%x: %s", address, msg);
+		snprintf(buffer, buffer_size, "Wrong memory access read 0x%x: %s", address, msg);
 		this->msg = buffer;
 	}
 };

@@ -112,6 +112,11 @@ public:
     [[maybe_unused]] [[nodiscard]] virtual U32 get_cells_count() const { return 0; }
     [[maybe_unused]] [[nodiscard]] virtual U32 get_layers_count() const { return 0; }
 
+    /**
+     * Returns the number of bytes taken by the cells of the tree. For debug only.
+     */
+    [[maybe_unused]] [[nodiscard]] virtual U32 get_tree_cells_size() const { return 0; }
+
     const U8* const memory_position;
 };
 
@@ -142,6 +147,7 @@ public:
 	[[maybe_unused]] [[nodiscard]] U8 get_granularity() const override { return granularity; }
 	[[maybe_unused]] [[nodiscard]] U32 get_cells_count() const override { return cells_count; }
 	[[maybe_unused]] [[nodiscard]] U32 get_layers_count() const override { return layers_count; }
+    [[maybe_unused]] [[nodiscard]] U32 get_tree_cells_size() const override;
 	[[maybe_unused]] [[nodiscard]] U32 get_allocated_memory_size() const override;
 
 private:
@@ -190,7 +196,7 @@ constexpr U8 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_alloca
 		bytes_pow = ALU::add_no_carry(bytes_pow, U8(1));
 	}
 
-	// Now get the 2^cells_pow number of cells needed fro this allocation
+	// Now get the 2^cells_pow number of cells needed for this allocation
 	U8 cells_pow = ALU::sub_no_carry(bytes_pow, cell_bytes_pow);
 	if (ALU::check_is_negative(cells_pow, OpSize::B)) {
 		cells_pow = 0; // case where bytes < granularity
@@ -227,6 +233,18 @@ constexpr U32 get_cell_allocated_size(const TreeCell<1>* cell)
 	else {
 		return cell->cell_size / 2;
 	}
+}
+
+
+template<U32 memory_size, U8 granularity>
+U32 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_tree_cells_size() const
+{
+    // base_cell_size * cells_count + derived_cell_size * (cells_count / 2 + cells_count / 4 + ... + cells_count / 2^max_layer)
+    // With (cells_count / 2 + cells_count / 4 + ... + cells_count / 2^max_layer) = 2^(max_layer+1) - 1 - cells_count
+    constexpr U32 base_cell_size = sizeof(TreeCell<1>);
+    constexpr U32 derived_cell_size = sizeof(TreeCell<2>);
+    constexpr U32 derived_cells_count = (cells_count << 1) - 1 - cells_count;
+    return base_cell_size * cells_count + derived_cells_count * derived_cell_size;
 }
 
 
@@ -427,4 +445,4 @@ void TreeCell<layer>::update_alloc_slots()
 	alloc_slots |= ALU::or_(right_slots & (0b1 << (layer - 1)), left_slots & (0b1 << (layer - 1))) << 1;
 }
 
-};
+}

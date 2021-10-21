@@ -6,9 +6,11 @@
 #include "ALU.hpp"
 #include "instructions.h"
 #include "registers.h"
+#include "memory/memory_manager.hpp"
 #include "memory/RAM.hpp"
 #include "memory/ROM.hpp"
 #include "memory/stack.hpp"
+#include "memory/buffer.hpp"
 #include "exceptions.h"
 #include "interrupts.h"
 
@@ -16,17 +18,15 @@
 class CPU
 {
 	Registers registers;
-	RAM<4096, U32> ram;
-	ROM<U8> rom;
-    RAM<128, U8> io = RAM<128, U8>(new U8[128]{});
-    Stack stack;
 
-	Interrupts::InterruptDescriptorTable<64>* interruptsTable;
+    Mem::Memory* const memory;
 
-	const Inst** instructions;
-	const U32 instructions_count;
-	
-	const Inst* currentInstruction;
+    Mem::Buffer<128, U8> io = Mem::Buffer<128, U8>(new U8[128]{});
+
+	Interrupts::InterruptDescriptorTable<64>* interruptsTable = nullptr; // TODO
+
+    const std::vector<Inst>* const instructions;
+	const Inst* currentInstruction = nullptr;
 
 	U32 clock_cycle_count = 0;
 
@@ -59,12 +59,10 @@ class CPU
     }
 
 public:
-    CPU(Mem::Memory* memory);
-	CPU(const U8* const ROM_bytes, U8* RAM_bytes, U32 stack_size, const Inst** instructions, const U32 count);
+    explicit CPU(Mem::Memory* memory);
 
 	~CPU()
 	{
-        delete stack.get_bytes();
         delete io.get_bytes();
 	}
 

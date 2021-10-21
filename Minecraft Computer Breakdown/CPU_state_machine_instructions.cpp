@@ -109,11 +109,11 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 				// build stack frame levels
 				if (data.op_size == OpSize::DW) {
 					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 4);
-					push(ram.read(storage.enter.ebp, data.op_size), data.op_size);
+					push(memory->read(storage.enter.ebp, data.op_size), data.op_size);
 				}
 				else {
 					storage.enter.ebp = ALU::sub_no_carry(storage.enter.ebp, 2);
-					push(ram.read(storage.enter.ebp, data.op_size), data.op_size);
+					push(memory->read(storage.enter.ebp, data.op_size), data.op_size);
 				}
 				incr_index = 1;
 			}
