@@ -22,7 +22,7 @@ std::pair<U8*, U8*>& load_memory_contents(std::filebuf& memory_file, uint32_t ro
 }
 
 
-std::vector<Inst>* load_instructions(std::filebuf& instructions_file, uint32_t inst_start, uint32_t inst_end)
+std::vector<const Inst>* load_instructions(std::filebuf& instructions_file, uint32_t inst_start, uint32_t inst_end)
 {
     uint32_t instructions_count = inst_end - inst_start;
 
@@ -41,7 +41,8 @@ std::vector<Inst>* load_instructions(std::filebuf& instructions_file, uint32_t i
 
 
 Mem::Memory* load_memory(const std::string& memory_map_filename,
-				 		 const std::string& memory_contents_filename)
+				 		 const std::string& memory_contents_filename,
+				 		 const std::string& instructions_filename)
 {
 	std::ifstream memory_map_file(memory_map_filename);
 	if (!memory_map_file) {
@@ -72,24 +73,19 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 	
 	memory_file.close();
 	
-	Mem::Memory* memory = new Memory(inst_start, instructions.size() * sizeof(Inst),
-									 rom_start, rom, ram);
-	
-	return memory;
-}
-
-
-std::vector<Inst>* load_instructions(const std::string& instructions_filename)
-{
 	std::filebuf instructions_file;
 	if (!instructions_file.open(instructions_filename, std::ios::in | std::ios::binary)) {
 		std::cout << "Could not open the instructions file '" << instructions_filename << "'\n";
 		return;
 	}
 	
-	std::vector<Inst>* instructions = load_instructions(instructions_file, inst_start, inst_end);
+	std::vector<const Inst>* instructions = load_instructions(instructions_file, inst_start, inst_end);
 	
 	instructions_file.close();
 	
-	return instructions;
+	Mem::Memory* memory = new Memory(inst_start, instructions.size() * sizeof(Inst),
+									 rom_start, rom, ram,
+									 instructions);
+	
+	return memory;
 }

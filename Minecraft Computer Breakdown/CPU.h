@@ -59,6 +59,7 @@ class CPU
     }
 
 public:
+    CPU(Mem::Memory* memory);
 	CPU(const U8* const ROM_bytes, U8* RAM_bytes, U32 stack_size, const Inst** instructions, const U32 count);
 
 	~CPU()

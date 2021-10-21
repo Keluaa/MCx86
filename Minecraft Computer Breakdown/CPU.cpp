@@ -4,6 +4,11 @@
 #include "ALU.hpp"
 #include "CPU.h"
 
+CPU::CPU(Mem::Memory* memory)
+	: 
+{
+	
+}
 
 CPU::CPU(const U8* const ROM_bytes, U8* RAM_bytes, U32 stack_size, const Inst** instructions, const U32 count)
 	: ram(RAM_bytes),

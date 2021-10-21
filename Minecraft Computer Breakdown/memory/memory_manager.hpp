@@ -33,12 +33,16 @@ class Memory
 	RAM<RAM_SIZE, U32> ram;
 	Stack<STACK_SIZE> stack;
 	
+	const std::vector<const Inst> instructions;
+	
 public:
 	/**
-	 * The memory manager takes ownership of the ROM and RAM data.
+	 * The memory manager takes ownership of the ROM and RAM data,
+	 * as well as all of the instructions.
 	 */
 	Memory(U32 text_pos, U32 text_size,
-		   U32 rom_pos, U8* rom_bytes, U8* ram_bytes)
+		   U32 rom_pos, U8* rom_bytes, U8* ram_bytes,
+		   std::vector<const Inst>& instructions)
 		: text_pos(text_pos), text_end(text_pos + text_size),
 		  rom_pos(rom_pos), rom_end(rom_pos + ROM_SIZE),
 		  ram_pos(rom_end), ram_end(ram_pos + RAM_SIZE),
@@ -47,7 +51,8 @@ public:
 		  stack_bytes(std::make_unique<U8>(STACK_SIZE)),
 		  rom(rom_bytes),
 		  ram(ram_bytes),
-		  stack(stack_bytes.get())
+		  stack(stack_bytes.get()),
+		  instructions(std::move(instructions))
 	{
 		if (rom_size > ROM_SIZE) {
 			std::cout << "Error: given ROM size (" << rom_size << ") is greater than the maximum one (" << ROM_SIZE << ").\n";
