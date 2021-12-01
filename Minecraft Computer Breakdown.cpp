@@ -1,9 +1,8 @@
 ﻿
 #include <iostream>
-#include <bitset>
- 
-#include "data_types.h"
-#include "CPU.h"
+
+#include "CPU/CPU.h"
+#include "load_program.h"
 
 
 /*
@@ -48,65 +47,57 @@ Description complète des ELF: https://www.youtube.com/watch?v=nC1U1LJQL8o
 
 Bon site de référence : https://sandpile.org/
 
-
 */
 
-#ifdef _MSC_VER
-// use a lambda as an alternative for designated initializers
-// see https://stackoverflow.com/a/49572324/8662187
-#define with_new(T, param, ...) ([&]{ T ${param}; __VA_ARGS__; return new T($); }())
-#else
-// Should only be enabled when the compiler supports designated initializers
-#define $  // clear the $ sign used for the 'with_new' in the other case
-#define with_new(T, param, ...) new T{param, __VA_ARGS__} // standard definition
-#endif
+static const char memory_map_filename[] = "../executable_file_data/memory_map.txt";
+static const char memory_contents_filename[] = "../executable_file_data/memory_data.bin";
+static const char instructions_filename[] = "../executable_file_data/instructions.bin";
 
-/*
-const Inst** load_fibbonacci(U32& instructions_count)
+
+/**
+ * Basic signal handling to set the exit code as the signal code.
+ */
+void signal_handler(int sig)
 {
-	instructions_count = 6;
-	Inst** instructions = new Inst*[instructions_count];
-	std::memset(instructions, NULL, instructions_count);
-
-	int i = 0;
-	instructions[i++] = with_new(Inst, ISA::Opcodes::MOV, $.op1_type = Inst::R, $.op1 = ISA::Registers::EAX, $.op2_type = Inst::I, $.op2 = 0);
-	instructions[i++] = with_new(Inst, ISA::Opcodes::MOV, $.op1_type = Inst::R, $.op1 = ISA::Registers::EDX, $.op2_type = Inst::I, $.op2 = 1);
-	instructions[i++] = with_new(Inst, ISA::Opcodes::ADD, $.op1_type = Inst::R, $.op1 = ISA::Registers::EAX, $.op2_type = Inst::R, $.op2 = ISA::Registers::EDX);
-	instructions[i++] = with_new(Inst, ISA::Opcodes::XCHG, $.op1_type = Inst::R, $.op1 = ISA::Registers::EAX, $.op2_type = Inst::R, $.op2 = ISA::Registers::EDX);
-	instructions[i++] = with_new(Inst, ISA::Opcodes::JNO, $.displacement = -2);
-	instructions[i++] = with_new(Inst, ISA::Opcodes::STOP);
-
-	return (const Inst**) instructions;
+    std::quick_exit(sig);
 }
-*/
-
-/*
-const Inst** load_fibbonacci(U32& instructions_count)
-{
-	instructions_count = 0;
-	Inst** instructions = new Inst*[instructions_count];
-	std::memset(instructions, 0, instructions_count);
-
-	// TODO
-
-	return (const Inst**) instructions;
-}
-*/
-
-				 		 
-static const char memory_map_filename[] = "executable_file_data/memory_map.txt";
-static const char memory_contents_filename[] = "executable_file_data/memory_data.bin";
-static const char instructions_filename[] = "executable_file_data/instructions.bin";
 
 
 int main()
 {
-	Mem::Memory* memory = load_memory(memory_map_filename, 
-									  memory_contents_filename,
-									  instructions_filename);
-	
-	CPU cpu(memory);
-	cpu.run();
-	
+    signal(SIGSEGV, signal_handler);
+    signal(SIGABRT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    signal(SIGINT, signal_handler);
+
+    Mem::Memory* memory;
+
+    try {
+        memory = load_memory(memory_map_filename,
+                             memory_contents_filename,
+                             instructions_filename);
+    }
+    catch (const std::exception& e) {
+        std::cout << "Program loading failed.\n";
+        std::cerr << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "Program loaded.\n";
+
+    try {
+        CPU cpu(memory);
+        cpu.run(1000);
+    }
+    catch (const std::exception& e) {
+        std::cout << "Program failed.\n";
+        std::cerr << e.what() << "\n";
+        delete memory;
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "Program finished without errors.\n";
+
 	delete memory;
+    return EXIT_SUCCESS;
 }

@@ -4,6 +4,7 @@ project(Minecraft_Computer_Breakdown)
 set(HEADER_FILES
         ALU.hpp
 		data_types.h
+		load_program.h
 		CPU/CPU.h
 		CPU/exceptions.h
 		CPU/instructions.h

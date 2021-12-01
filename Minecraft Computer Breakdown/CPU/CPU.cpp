@@ -23,11 +23,10 @@ void CPU::switch_protected_mode(bit protected_)
 
 
 /**
- * @brief Executes the instructions until the end of the instructions list is reached.
+ * @brief Executes the instructions until the end of the instructions list or the maximum number of cycles is reached.
  */
-void CPU::run()
+void CPU::run(size_t max_cycles)
 {
-	const int max_cycles = 1000;
 	while (registers.EIP < instructions->size()) {
 		new_clock_cycle();
 		try {
