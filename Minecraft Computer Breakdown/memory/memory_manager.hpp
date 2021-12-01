@@ -13,8 +13,8 @@
 namespace Mem
 {
 
-// 2MB of ROM, 1MB of RAM, 1MB of stack
-const U32 ROM_SIZE = 0x200000;
+// 1MB of ROM, 1MB of RAM, 1MB of stack
+const U32 ROM_SIZE = 0x100000;
 const U32 RAM_SIZE = 0x100000;
 const U32 STACK_SIZE = 0x100000;
 

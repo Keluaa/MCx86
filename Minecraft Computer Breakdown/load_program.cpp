@@ -10,13 +10,13 @@
 #include "memory/memory_manager.hpp"
 
 
-std::pair<U8*, U8*> load_memory_contents(std::filebuf& memory_file, uint32_t rom_start, uint32_t ram_start)
+std::pair<U8*, U8*> load_memory_contents(std::filebuf& memory_file, uint32_t rom_size, uint32_t ram_size)
 {
 	U8* rom = new U8[Mem::ROM_SIZE] { };
 	U8* ram = new U8[Mem::RAM_SIZE] { };
 
-    memory_file.sgetn(reinterpret_cast<char*>(rom), rom_start);
-    memory_file.sgetn(reinterpret_cast<char*>(ram), ram_start);
+    memory_file.sgetn(reinterpret_cast<char*>(rom), rom_size);
+    memory_file.sgetn(reinterpret_cast<char*>(ram), ram_size);
 
 	return std::make_pair(rom, ram);
 }
@@ -53,14 +53,18 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 	uint32_t entry_point, 
 			 inst_start, inst_end,
 			 rom_start,
-			 ram_start;
-	
-	memory_map_file >> std::hex
-					>> entry_point
-					>> inst_start >> inst_end
-					>> rom_start
-					>> ram_start;
-	
+			 ram_start,
+             raw_rom_size,
+             raw_ram_size;
+
+    memory_map_file >> std::hex
+                    >> entry_point
+                    >> inst_start >> inst_end
+                    >> rom_start
+                    >> ram_start
+                    >> raw_rom_size
+                    >> raw_ram_size;
+
 	memory_map_file.close();
 
 	std::filebuf memory_file;
@@ -69,7 +73,7 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 		return nullptr;
 	}
 
-	auto [rom, ram] = load_memory_contents(memory_file, rom_start, ram_start);
+	auto&& [rom, ram] = load_memory_contents(memory_file, raw_rom_size, raw_ram_size);
 	
 	memory_file.close();
 	

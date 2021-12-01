@@ -14,7 +14,7 @@ class ReadMemoryInterface
 protected:
 	U8* const bytes;
 
-	explicit ReadMemoryInterface(U8* const bytes)
+	explicit ReadMemoryInterface(U8* bytes)
 		: bytes(bytes)
 	{ }
 
@@ -51,7 +51,7 @@ public:
 class ReadWriteMemoryInterface : public ReadMemoryInterface
 {
 protected:
-	explicit ReadWriteMemoryInterface(U8* const bytes)
+	explicit ReadWriteMemoryInterface(U8* bytes)
 		: ReadMemoryInterface(bytes)
 	{ }
 	

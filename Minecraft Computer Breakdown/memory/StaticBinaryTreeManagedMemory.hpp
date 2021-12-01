@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#include <memory_resource>
-
 #include "../data_types.h"
 #include "../ALU.hpp"
 
@@ -99,30 +97,8 @@ template<U8 layer>
 constexpr U32 get_cell_allocated_size(const TreeCell<layer>* cell);
 
 
-class StaticBinaryTreeManagedMemoryBase : public std::pmr::memory_resource
-{
-public:
-	explicit StaticBinaryTreeManagedMemoryBase(const U8* const memory_position) : memory_position(memory_position) { }
-
-	~StaticBinaryTreeManagedMemoryBase() override = default;
-
-    [[maybe_unused]] [[nodiscard]] virtual U32 get_memory_size() const { return 0; }
-    [[maybe_unused]] [[nodiscard]] virtual U8 get_granularity() const { return 0; }
-    [[maybe_unused]] [[nodiscard]] virtual U32 get_allocated_memory_size() const { return 0; }
-    [[maybe_unused]] [[nodiscard]] virtual U32 get_cells_count() const { return 0; }
-    [[maybe_unused]] [[nodiscard]] virtual U32 get_layers_count() const { return 0; }
-
-    /**
-     * Returns the number of bytes taken by the cells of the tree. For debug only.
-     */
-    [[maybe_unused]] [[nodiscard]] virtual U32 get_tree_cells_size() const { return 0; }
-
-    const U8* const memory_position;
-};
-
-
 template<U32 memory_size, U8 granularity>
-class StaticBinaryTreeManagedMemory : public StaticBinaryTreeManagedMemoryBase
+class StaticBinaryTreeManagedMemory
 {
     static_assert(ALU::check_power_of_2(granularity));
     static_assert(ALU::check_power_of_2(memory_size));
@@ -132,29 +108,42 @@ class StaticBinaryTreeManagedMemory : public StaticBinaryTreeManagedMemoryBase
 	static constexpr U8 get_max_layer();
 	static constexpr U32 compute_cells_count();
 
+    /**
+     * Returns the power of 2 of the number of cells needed to place the number of bytes in memory. This number is the
+     * level at which the allocation with take place.
+     * 'is_zero' is set if 'bytes' is zero.
+     */
 	constexpr U8 get_allocation_size(size_t bytes, bit& is_zero);
 
 public:
 	explicit StaticBinaryTreeManagedMemory(const U8* const memory_position)
-		: StaticBinaryTreeManagedMemoryBase(memory_position),
+		: memory_position(memory_position),
 		  layers_count(get_max_layer()), cells_count(compute_cells_count()),
 		  allocator_tree_root(granularity << layers_count, memory_position)
 	{ }
 
-	~StaticBinaryTreeManagedMemory() override = default;
+	~StaticBinaryTreeManagedMemory() = default;
 
-	[[maybe_unused]] [[nodiscard]] U32 get_memory_size() const override { return memory_size; }
-	[[maybe_unused]] [[nodiscard]] U8 get_granularity() const override { return granularity; }
-	[[maybe_unused]] [[nodiscard]] U32 get_cells_count() const override { return cells_count; }
-	[[maybe_unused]] [[nodiscard]] U32 get_layers_count() const override { return layers_count; }
-    [[maybe_unused]] [[nodiscard]] U32 get_tree_cells_size() const override;
-	[[maybe_unused]] [[nodiscard]] U32 get_allocated_memory_size() const override;
+    [[maybe_unused, nodiscard]] constexpr U32 get_memory_size()  const { return memory_size;  }
+	[[maybe_unused, nodiscard]] constexpr U8  get_granularity()  const { return granularity;  }
+	[[maybe_unused, nodiscard]] constexpr U32 get_cells_count()  const { return cells_count;  }
+	[[maybe_unused, nodiscard]] constexpr U32 get_layers_count() const { return layers_count; }
+
+    /**
+     * Returns the number of bytes taken by the cells of the tree. For debug only.
+     */
+    [[maybe_unused, nodiscard]] U32 get_tree_cells_size() const;
+
+    /**
+     * Returns the number of bytes currently allocated. For debug only.
+     */
+    [[maybe_unused, nodiscard]] U32 get_allocated_memory_size() const;
+
+    [[nodiscard]] void* allocate(size_t bytes);
+    void deallocate(void* ptr, size_t bytes);
 
 private:
-    [[nodiscard]] void* do_allocate(size_t bytes, size_t alignment) override;
-	void do_deallocate(void* ptr, size_t bytes, size_t alignment) override;
-	[[nodiscard]] bool do_is_equal(const memory_resource& that) const noexcept override;
-
+    const U8* const memory_position;
 	const U8 layers_count;
 	const U32 cells_count;
 	TreeCell<get_max_layer()> allocator_tree_root;
@@ -258,7 +247,7 @@ U32 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_allocated_memor
 
 
 template<U32 memory_size, U8 granularity>
-void* StaticBinaryTreeManagedMemory<memory_size, granularity>::do_allocate(size_t bytes, size_t alignment)
+void* StaticBinaryTreeManagedMemory<memory_size, granularity>::allocate(size_t bytes)
 {
 	// alloc_size is the layer index where we want to allocate a cell
 	bit is_zero = 0;
@@ -282,7 +271,7 @@ void* StaticBinaryTreeManagedMemory<memory_size, granularity>::do_allocate(size_
 
 
 template<U32 memory_size, U8 granularity>
-void StaticBinaryTreeManagedMemory<memory_size, granularity>::do_deallocate(void* ptr, size_t bytes, size_t alignment)
+void StaticBinaryTreeManagedMemory<memory_size, granularity>::deallocate(void* ptr, size_t bytes)
 {
 	static constexpr U32 PTR_MASK = U32(U64(U32(-1)) << granularity);
 
@@ -318,22 +307,6 @@ void StaticBinaryTreeManagedMemory<memory_size, granularity>::do_deallocate(void
 	}
 
 	allocator_tree_root.deallocate(cell_index, alloc_size);
-}
-
-
-template<U32 memory_size, U8 granularity>
-bool StaticBinaryTreeManagedMemory<memory_size, granularity>::do_is_equal(const std::pmr::memory_resource& that) const noexcept
-{
-	const auto* other = dynamic_cast<const StaticBinaryTreeManagedMemoryBase*>(&that);
-
-	if (other == nullptr) {
-		return false;
-	}
-	else {
-		return memory_position == other->memory_position 
-			&& memory_size == other->get_memory_size() 
-			&& granularity == other->get_granularity();
-	}
 }
 
 

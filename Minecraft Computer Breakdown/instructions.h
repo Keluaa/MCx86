@@ -119,7 +119,8 @@ struct Inst
 	// both of those values can be used as general purpose values in spacial instructions (bound, call...)
 	U32 address_value; 
 	U32 immediate_value;
-	
+
+    Inst() = default;
 	Inst(U8 opcode, U32 flags, U32 address_value = 0, U32 immediate_value = 0);
 	
 	[[nodiscard]] InstData getInstData() const;

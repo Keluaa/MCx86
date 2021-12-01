@@ -8,7 +8,8 @@ TEST_SUITE("RAM_alloc")
 {
     TEST_CASE("alloc_U32")
     {
-        RAM<128, U32> ram;
+        U8 memory[128 / sizeof(U8)];
+        Mem::RAM<128, U32> ram(memory);
 
         REQUIRE(ram.get_memory_manager().get_cells_count() == 4);
         REQUIRE(ram.get_memory_manager().get_layers_count() == 2);
@@ -26,10 +27,12 @@ TEST_SUITE("RAM_alloc")
 
     TEST_CASE("cell_1_alloc_fail")
     {
+        U8 memory[128 / sizeof(U8)];
+
         //    0
         //  0   0
         // 0 0 0 0
-        RAM<128, U32> ram;
+        Mem::RAM<128, U32> ram(memory);
 
         //    0
         //  1   0
@@ -80,7 +83,8 @@ TEST_SUITE("RAM_alloc")
 
     TEST_CASE("full_alloc")
     {
-        RAM<64, U8> ram;
+        U8 memory[64 / sizeof(U8)];
+        Mem::RAM<64, U8> ram(memory);
 
         REQUIRE(ram.get_memory_manager().get_cells_count() == 8);
         REQUIRE(ram.get_memory_manager().get_layers_count() == 3);
@@ -106,7 +110,8 @@ TEST_SUITE("RAM_alloc")
 
     TEST_CASE("over_alloc")
     {
-        RAM<32, U16> ram;
+        U8 memory[32 / sizeof(U8)];
+        Mem::RAM<32, U16> ram(memory);
 
         REQUIRE(ram.get_memory_manager().get_cells_count() == 2);
         REQUIRE(ram.get_memory_manager().get_layers_count() == 1);
@@ -119,7 +124,8 @@ TEST_SUITE("RAM_alloc")
 
     TEST_CASE("under_alloc")
     {
-        RAM<64, U16> ram;
+        U8 memory[64 / sizeof(U8)];
+        Mem::RAM<64, U16> ram(memory);
 
         REQUIRE(ram.get_memory_manager().get_cells_count() == 4);
         REQUIRE(ram.get_memory_manager().get_layers_count() == 2);
