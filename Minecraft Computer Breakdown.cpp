@@ -79,6 +79,8 @@ const Inst** load_fibbonacci(U32& instructions_count)
 	return (const Inst**) instructions;
 }
 */
+
+/*
 const Inst** load_fibbonacci(U32& instructions_count)
 {
 	instructions_count = 0;
@@ -89,12 +91,22 @@ const Inst** load_fibbonacci(U32& instructions_count)
 
 	return (const Inst**) instructions;
 }
+*/
+
+				 		 
+static const char memory_map_filename[] = "executable_file_data/memory_map.txt";
+static const char memory_contents_filename[] = "executable_file_data/memory_data.bin";
+static const char instructions_filename[] = "executable_file_data/instructions.bin";
+
 
 int main()
 {
-	U32 instructions_count;
-	const Inst** instructions = load_fibbonacci(instructions_count);
+	Mem::Memory* memory = load_memory(memory_map_filename, 
+									  memory_contents_filename,
+									  instructions_filename);
 	
-	CPU cpu(instructions, instructions_count);
+	CPU cpu(memory);
 	cpu.run();
+	
+	delete memory;
 }
