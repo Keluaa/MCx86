@@ -1,6 +1,8 @@
 
 #include "registers.h"
 
+#include "exceptions.h"
+
 
 U32 Registers::read(const U8 register_id) const 
 {

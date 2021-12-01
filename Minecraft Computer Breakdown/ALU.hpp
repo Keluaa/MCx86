@@ -3,8 +3,6 @@
 #include <type_traits>
 
 #include "data_types.h"
-#include "circuit_branch_monitor.h"
-#include "instructions.h"
 
 
 /**

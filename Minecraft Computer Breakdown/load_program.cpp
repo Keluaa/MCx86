@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "instructions.h"
+#include "CPU/instructions.h"
 
 #include "memory/memory_manager.hpp"
 

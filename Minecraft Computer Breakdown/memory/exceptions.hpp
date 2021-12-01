@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "../data_types.h"
-#include "../exceptions.h"
+#include "../CPU/exceptions.h"
 
 
 namespace Mem
@@ -40,4 +40,4 @@ public:
 	}
 };
 
-};
+}
