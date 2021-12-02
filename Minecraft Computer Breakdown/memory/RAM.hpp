@@ -31,8 +31,12 @@ public:
 	{
         T* t = static_cast<T*>(memory.allocate(sizeof(T)));
 		if (t != nullptr) {
-            // Don't use fancy STL allocation functions for compatibility with Clang
+#ifndef __clang__
             std::construct_at(t, std::forward<Args>(args)...);
+#else
+            // Don't use fancy STL allocation functions for compatibility with Clang
+            ::new (const_cast<void*>(static_cast<const volatile void*>(t))) T(std::forward<Args>(args)...);
+#endif
 		}
 		return t;
 	}

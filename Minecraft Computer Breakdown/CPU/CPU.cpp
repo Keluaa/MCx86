@@ -3,6 +3,7 @@
 
 #include "ALU.hpp"
 #include "CPU.h"
+#include "opcodes.h"
 
 
 CPU::CPU(Mem::Memory* memory)

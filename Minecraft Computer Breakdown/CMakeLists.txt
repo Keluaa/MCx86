@@ -8,6 +8,7 @@ set(HEADER_FILES
 		CPU/CPU.h
 		CPU/exceptions.h
 		CPU/instructions.h
+		CPU/opcodes.h
 		CPU/interrupts.h
 		CPU/registers.h
 		memory/exceptions.hpp

@@ -2,6 +2,7 @@
 
 #include "../data_types.h"
 #include "../ALU.hpp"
+#include "../CPU/exceptions.h"
 
 
 namespace Mem
