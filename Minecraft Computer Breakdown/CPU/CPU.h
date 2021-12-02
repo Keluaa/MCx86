@@ -3,8 +3,7 @@
 #include <stack>
 #include <limits>
 
-#include "data_types.h"
-#include "ALU.hpp"
+#include "../data_types.h"
 #include "instructions.h"
 #include "registers.h"
 #include "memory/memory_manager.hpp"

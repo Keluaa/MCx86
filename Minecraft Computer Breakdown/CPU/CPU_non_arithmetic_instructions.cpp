@@ -1,7 +1,7 @@
 ﻿
 #include <iostream>
 
-#include "ALU.hpp"
+#include "../ALU.hpp"
 #include "CPU.h"
 #include "opcodes.h"
 

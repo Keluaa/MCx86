@@ -1,10 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 
-#include "data_types.h"
+#include "../data_types.h"
+#include "../ALU.hpp"
 #include "instructions.h"
-#include "ALU.hpp"
 
 
 namespace Register
@@ -49,6 +49,48 @@ namespace Register
 	const U8 CR0 = 0;
 	const U8 CR1 = 1;
 	const U8 CR3 = 2;
+	
+	// TODO : replace by:
+/*
+enum class Register : uint8_t {
+    EAX = 0,
+    ECX = 1,
+    EDX = 2,
+    EBX = 3,
+    ESP = 4,
+    EBP = 5,
+    ESI = 6,
+    EDI = 7,
+
+    AX = 0b01000 | EAX,
+    CX = 0b01000 | ECX,
+    DX = 0b01000 | EDX,
+    BX = 0b01000 | EBX,
+    SP = 0b01000 | ESP,
+    BP = 0b01000 | EBP,
+    SI = 0b01000 | ESI,
+    DI = 0b01000 | EDI,
+
+    AL = 0b10000 | EAX,
+    CL = 0b10000 | ECX,
+    DL = 0b10000 | EDX,
+    BL = 0b10000 | EBX,
+    AH = 0b10000 | ESP,
+    CH = 0b10000 | EBP,
+    DH = 0b10000 | ESI,
+    BH = 0b10000 | EDI,
+
+    CS = 0b11000 | EAX,
+    SS = 0b11000 | ECX,
+    DS = 0b11000 | EDX,
+    ES = 0b11000 | EBX,
+    FS = 0b11000 | ESP,
+    GS = 0b11000 | EBP,
+
+    CR0 = 0b11000 | ESI,
+    CR1 = 0b11000 | EDI,
+};
+*/
 };
 
 
