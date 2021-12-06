@@ -38,7 +38,7 @@ class CPU
 	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2);
 	void execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, EFLAGS& flags);
 	
-	[[nodiscard]] U32 compute_address(bit _32bits_mode, OpSize opSize) const;
+	[[nodiscard]] U32 compute_address() const;
 	
 	void push(U32 value, OpSize size = OpSize::UNKNOWN);
 	U32 pop(OpSize size = OpSize::UNKNOWN);

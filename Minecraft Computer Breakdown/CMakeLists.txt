@@ -11,6 +11,7 @@ set(HEADER_FILES
 		CPU/opcodes.h
 		CPU/interrupts.h
 		CPU/registers.h
+		CPU/register_flags_interface.h
 		memory/exceptions.hpp
 		memory/memory_interfaces.hpp
 		memory/memory_manager.hpp
@@ -24,7 +25,7 @@ set(HEADER_FILES
 set(SOURCE_FILES
 		load_program.cpp
 		CPU/CPU.cpp
-		CPU/CPU_instructions.cpp
+        CPU/CPU_arithmetic_instructions.cpp
 		CPU/CPU_non_arithmetic_instructions.cpp
 		CPU/CPU_state_machine_instructions.cpp
 		CPU/instructions.cpp

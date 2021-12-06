@@ -1,13 +1,11 @@
 ﻿
-#include <iostream>
-
 #include "../ALU.hpp"
 #include "CPU.h"
 #include "opcodes.h"
 
 
 /**
- * @brief Executes the instruction specified by its opcode. This method handles all 'simple' instructions.
+ * Executes the instruction specified by its opcode. This method handles all 'simple' instructions.
  * @param data Holds instruction information
  * @param flags EFLAGS register
  * @param ret Return value of the instruction

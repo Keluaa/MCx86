@@ -24,7 +24,7 @@ void CPU::switch_protected_mode(bit protected_)
 
 
 /**
- * @brief Executes the instructions until the end of the instructions list or the maximum number of cycles is reached.
+ * Executes the instructions until the end of the instructions list or the maximum number of cycles is reached.
  */
 void CPU::run(size_t max_cycles)
 {
@@ -49,7 +49,7 @@ void CPU::run(size_t max_cycles)
 
 
 /**
- * @brief Utility to keep track of how many cycles elapsed
+ * Utility to keep track of how many cycles elapsed
  */
 void CPU::new_clock_cycle()
 {
@@ -59,7 +59,7 @@ void CPU::new_clock_cycle()
 
 
 /**
- * @brief Returns the size of an operand, using the prefixes of the instruction, as well as the D flag in the current segment.
+ * Returns the size of an operand, using the prefixes of the instruction, as well as the D flag in the current segment.
  */
 constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment)
 {
@@ -76,7 +76,7 @@ constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_
 
 
 /**
- * @brief Executes the instruction read the address pointed by the EIP.
+ * Executes the instruction read the address pointed by the EIP.
  * Handles the common part of all instructions, which is operands fetching, flags update, and writing the results to their destination.
  * Actual instruction logic is delegated to CPU::execute_arithmetic_instruction(), CPU::execute_non_arithmetic_instruction() and
  * CPU::execute_non_arithmetic_instruction_with_state_machine().
@@ -91,94 +91,70 @@ void CPU::execute_instruction()
 	InstData data = inst.getInstData();
 	
 	// compute address using the mod r/m, SIB and displacement bytes
-	if (inst.compute_address) {
-		data.address = compute_address(!inst.address_size_override, data.op1_size); // TODO: more things to do to have the size of the address
+	if (inst.should_compute_address()) {
+		data.address = compute_address();
 	}
 
 	// TODO : fetch the segment's D bit, maybe also store it and update it when there is a CS change
 	OpSize operand_size = get_size(inst.operand_size_override, inst.operand_byte_size_override);
-	OpSize address_size = get_size(inst.address_size_override, inst.address_byte_size_override);
-	
+	OpSize address_size = OpSize::DW;
+
 	// TODO: use the computed address to read the operands. Also fix the operands size.
 	
 	// Read the operands
-	if (inst.read_op1) {
-		switch(inst.op1_type) {
+	if (inst.op1.read) {
+        // TODO : rework this, handle data.op1_size
+		switch(inst.op1.type) {
 		case OpType::REG:
 			data.op1_size = operand_size;
-			data.op1 = registers.read_index(inst.op1_register, data.op1_size);
+			data.op1 = registers.read(inst.op1.reg);
+
+            // TODO : for special registers:
+            //  data.op1_size = OpSize::W; // all segment registers have a fixed length
+            //  data.op1_size = OpSize::DW; // for control registers
+
 			break;
+
 		case OpType::MEM:
 			data.op1_size = address_size;
             data.op1 = memory->read(inst.address_value, data.op1_size);
 			break;
+
 		case OpType::IMM:
 			data.op1_size = operand_size;
 			data.op1 = inst.immediate_value;
 			break;
-		case OpType::M_M:
-			// used only by BOUND for the second operand
-			break;
-		case OpType::SREG:
-			data.op1_size = OpSize::W; // all segment registers have a fixed length
-			data.op1 = registers.read_segment(inst.op1_register);
-			break;
-		case OpType::MOFF:
-			data.op1_size = operand_size;
-			WARNING("moffs operands are not correctly addressed."); // TODO
-			data.op1 = memory->read(inst.address_value, data.op1_size);
-			break;
-		case OpType::CREG:
-			data.op1_size = OpSize::DW;
-			data.op1 = registers.read_control_register(inst.op1_register);
-			break;
-		case OpType::NONE:
-			break;
+
+        case OpType::IMM_MEM:
+            break;
 		}
 	}
-	
-	if (inst.read_op2) {
-		switch(inst.op2_type) {
+
+	if (inst.op2.read) {
+        // TODO : rework this, handle data.op2_size
+		switch(inst.op2.type) {
 		case OpType::REG:
 			data.op2_size = operand_size;
-			data.op2 = registers.read_index(inst.op2_register, data.op2_size);
+			data.op2 = registers.read(inst.op2.reg);
+
+            // TODO : for special registers:
+            //  data.op1_size = OpSize::W; // all segment registers have a fixed length
+            //  data.op1_size = OpSize::DW; // for control registers
+
 			break;
+
 		case OpType::MEM:
 			data.op2_size = address_size;
 			data.op2 = memory->read(inst.address_value, data.op2_size);
 			break;
+
 		case OpType::IMM:
 			data.op2_size = operand_size;
 			data.op2 = inst.immediate_value;
 			break;
-		case OpType::M_M:
-			// used only by BOUND
-			// the fact that we are addressing memory more than once could be problematic
-			data.op2_size = get_size(inst.address_size_override, 0);
-			data.op2 = memory->read(inst.address_value, data.op2_size);
-			if (data.op2_size == OpSize::DW) {
-				data.op3 = memory->read(inst.address_value + 4, data.op2_size);
-			}
-			else {
-				data.op3 = memory->read(inst.address_value + 2, data.op2_size);
-			}
-			data.op3_size = data.op2_size;
-			break;
-		case OpType::SREG:
-			data.op2_size = OpSize::W;
-			data.op2 = registers.read_segment(inst.op2_register);
-			break;
-		case OpType::MOFF:
-			data.op2_size = operand_size;
-			WARNING("moffs operands are not correctly addressed."); // TODO
-			data.op2 = memory->read(inst.address_value, data.op1_size);
-			break;
-		case OpType::CREG:
-			data.op2_size = OpSize::DW;
-			data.op2 = registers.read_control_register(inst.op2_register);
-			break;
-		case OpType::NONE:
-			break;
+
+        case OpType::IMM_MEM:
+            break;
 		}
 	}
 
@@ -194,7 +170,6 @@ void CPU::execute_instruction()
 	if (inst.opcode & Opcodes::not_arithmetic) {
 		// non-trivial op
 		data.op_size = operand_size;
-		data.ad_size = address_size;
 
 		if (inst.opcode & Opcodes::state_machine) {
 			// include all state machine, jump and string instructions
@@ -214,19 +189,10 @@ void CPU::execute_instruction()
 	}
 
 	// write the output of the instruction to its destination
-	if (inst.write_ret1_to_register) {
-		if (inst.scale_output_override) {
-			registers.write_index(inst.register_out, return_value, data.op1_size);
-		}
-		else {
-			// TODO: fix register addressing here, because we can only access 8 registers like this 
-			registers.write(inst.register_out, return_value);
-		}
-	}
-	else if (inst.write_ret1_to_op1) {
-		switch (inst.op1_type) {
+	if (inst.write_ret1_to_op1) {
+		switch (inst.op1.type) {
 		case OpType::REG:
-			registers.write_index(inst.op1_register, return_value, data.op1_size);
+			registers.write(inst.op1.reg, return_value);
 			break;
 		case OpType::MEM:
             memory->write(inst.address_value, return_value, data.op1_size);
@@ -235,11 +201,20 @@ void CPU::execute_instruction()
 			break;
 		}
 	}
-	
-	if (inst.write_ret2_to_op2) {
-		switch (inst.op2_type) {
+
+    if (inst.write_ret2_to_register) {
+        if (inst.scale_output_override) {
+            // TODO : handle scaling with data.op1_size
+            registers.write(inst.register_out, return_value_2);
+        }
+        else {
+            registers.write(inst.register_out, return_value_2);
+        }
+    }
+    else if (inst.write_ret2_to_op2) {
+		switch (inst.op2.type) {
 		case OpType::REG:
-			registers.write_index(inst.op2_register, return_value_2, data.op2_size);
+			registers.write(inst.op2.reg, return_value_2);
 			break;
 		case OpType::MEM:
             memory->write(inst.address_value, return_value_2, data.op2_size);
@@ -252,113 +227,48 @@ void CPU::execute_instruction()
 
 
 /**
- * @brief Computes the effective address of the address operand of the current instruction.
+ * Computes the effective address of the address operand of the current instruction.
  */
-U32 CPU::compute_address(bit _32bits_mode, OpSize opSize) const
+U32 CPU::compute_address() const
 {
-	U32 address = currentInstruction->address_value;
-	U8 mod = currentInstruction->mod_rm_sib.mod;
-	U8 rm = currentInstruction->mod_rm_sib.rm;
-    
-	if (mod == 0b11) {
-		address = registers.read_index(rm, opSize);
-	}
-	else if (_32bits_mode) {
-		if (rm == 0b100) {
-			// use the SIB byte
-			U8 scale = currentInstruction->mod_rm_sib.scale;
-			U8 index = currentInstruction->mod_rm_sib.index;
-			U8 base = currentInstruction->mod_rm_sib.base;
-			
-			U32 index_val = registers.read(index);
-			
-			// scale the index using chained shifters
-			switch (scale)
-			{
-			case 0b11: index_val <<= 1; [[fallthrough]]; // *8 NOLINT(bugprone-branch-clone)
-			case 0b10: index_val <<= 1; [[fallthrough]]; // *4
-			case 0b01: index_val <<= 1; [[fallthrough]]; // *2
-			default:   break;							 // *1
-			}
-			
-			address = ALU::add_no_carry(address, index_val);
-			if (mod == 0b00 && base == 0b101) {
-				// no base
-			}
-			else {
-				U32 base_val = registers.read(base);
-				address = ALU::add_no_carry(address, base_val);
-			}
-		}
-		else if (mod == 0b00 && rm == 0b110) {
-			// 'address' has already the right value
-		}
-		else {
-			address = registers.read(rm); // only 32 bits registers are read here
-		}
-	}
-	else { // 16 bits mode
-		U16 a = 0, b = 0;
-			
-		switch (rm)
-		{
-			// TODO: this switch statement cam greatly be simplified
-		case 0b000:
-			a = registers.read(Register::BX);
-			b = registers.read(Register::SI);
-			break;
-				
-		case 0b001:
-			a = registers.read(Register::BX);
-			b = registers.read(Register::DI);
-			break;
-				
-		case 0b010:
-			a = registers.read(Register::BP);
-			b = registers.read(Register::SI);
-			break;
-				
-		case 0b011:
-			a = registers.read(Register::BP);
-			b = registers.read(Register::DI);
-			break;
-				
-		case 0b100:
-			a = registers.read(Register::SI);
-			break;
-				
-		case 0b101:
-			a = registers.read(Register::DI);
-			break;
-			
-		case 0b110:
-			if (mod != 0b00) {
-				a = registers.read(Register::BP);
-			}
-			break;
-			
-		case 0b111:
-			a = registers.read(Register::BX);
-			break;
+	U32 address = 0;
+    if (currentInstruction->displacement_present) {
+        address = currentInstruction->address_value;
+    }
 
-        default:
-            throw BadInstruction("Invalid RM byte", registers.EIP); // shouldn't happen
-		}
-		
-		address = ALU::add_no_carry(address, a);
-		address = ALU::add_no_carry(address, b);
-	}
-    
-    // TODO : displacement bytes following the Mod r/m byte in both modes (can only be present when mod != 0b11)
-    
-    // TODO : fetch the address value when mod != 0b11, READ THE DOCS! 
-	
+    U32 index_address = 0;
+    if (currentInstruction->reg_present) {
+        // TODO : there is something strange, if mod == 0b11, then we simply take its value without accessing the memory
+        //  yet there is no case where we do that, while this is the most common case
+
+        index_address = registers.read(static_cast<Register>(currentInstruction->reg));
+
+        // scale the index using chained shifters
+        switch (currentInstruction->scale)
+        {
+            case 0b11: index_address <<= 1; [[fallthrough]]; // *8 NOLINT(bugprone-branch-clone)
+            case 0b10: index_address <<= 1; [[fallthrough]]; // *4
+            case 0b01: index_address <<= 1; [[fallthrough]]; // *2
+            default:   break;							     // *1
+        }
+    }
+
+    if (currentInstruction->base_present) {
+        U32 base = registers.read_index(currentInstruction->base_reg, OpSize::DW);
+        index_address = ALU::add_no_carry(index_address, base);
+    }
+
+    if (currentInstruction->reg_present || currentInstruction->base_present) {
+        U32 index = memory->read(index_address, OpSize::DW);
+        address = ALU::add_no_carry(address, index);
+    }
+
 	return address;
 }
 
 
 /**
- * @brief Push a value to the stack, of variable size.
+ * Push a value to the stack, of variable size.
  * @param value The value to push
  * @param size The size of the value
  */
@@ -392,7 +302,7 @@ void CPU::push(U32 value, OpSize size)
 
 
 /**
- * @brief Pop a value from the stack.
+ * Pop a value from the stack.
  * @param size The size of the value.
  * @return The value popped
  */
@@ -428,7 +338,7 @@ U32 CPU::pop(OpSize size)
 
 
 /**
- * @brief Called to trigger an interrupt: saves the position in the program, setup the stack and error code data,
+ * Called to trigger an interrupt: saves the position in the program, setup the stack and error code data,
  * then switch to the corresponding interrupt handler. There is several things we need push to the stack, so we must
  * use the state machine design in order to spread them in several clock cycles.
  *
@@ -476,17 +386,17 @@ void CPU::interrupt(Interrupts::Interrupt interrupt)
 
 
 /**
- * @brief Utility function used to update the value of the adjust flag, after a arithmetic operation using the value of the AL register.
+ * Utility function used to update the value of the adjust flag, after a arithmetic operation using the value of the AL register.
  */
 void CPU::update_adjust_flag(EFLAGS& flags, U32 op1, U32 op2)
 {
 	/*
-	Adjust flag is set only if there were an carry from the first 4 bits of the AL register to the 4 other bits.
-	It is 0 otherwise, including when the operation didn't used the AL register.
+	Adjust flag is set only if there were a carry from the first 4 bits of the AL register to the 4 other bits.
+	It is 0 otherwise, including when the operation didn't use the AL register.
 	This function should only be called with instructions modifying the AL register (or AX and EAX, but not AH).
 	*/
-	if (currentInstruction->op1_type == OpType::REG && currentInstruction->op1_register == 0) {
-		// Not the implementation used in the circuit, which is much simpler, 
+	if (currentInstruction->op1.type == OpType::REG && currentInstruction->op1_reg_index() == 0) {
+		// Not the implementation used in the circuit, which is much simpler,
 		// as this flag can come out from the adder directly.
 		bit AF = (op1 & 0x0F) + (op2 & 0x0F) > 0x0F; // TODO : check operation order with the manual
 		flags.set_val(EFLAGS::AF, AF);
@@ -498,7 +408,7 @@ void CPU::update_adjust_flag(EFLAGS& flags, U32 op1, U32 op2)
 
 
 /**
- * @brief Utility function used to update all arithmetic flags
+ * Utility function used to update all arithmetic flags.
  */
 void CPU::update_status_flags(EFLAGS& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry)
 {
@@ -513,7 +423,7 @@ void CPU::update_status_flags(EFLAGS& flags, U32 op1, U32 op2, U32 result, OpSiz
 
 
 /**
- * @brief Read bytes from the IO buffer
+ * Read bytes from the IO buffer.
  */
 U32 CPU::read_io(U8 io_address, OpSize size)
 {
@@ -522,7 +432,7 @@ U32 CPU::read_io(U8 io_address, OpSize size)
 
 
 /**
- * @brief Write bytes to the IO buffer
+ * Write bytes to the IO buffer.
  */
 void CPU::write_io(U8 io_address, U32 value, OpSize size)
 {

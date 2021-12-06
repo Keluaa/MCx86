@@ -20,6 +20,8 @@ const U32 STACK_SIZE = 0x100000;
 
 class Memory
 {
+	// TODO : branch multi-access checking
+
 	U32 text_pos, text_end;
 	U32 rom_pos, rom_end; 
 	U32 ram_pos, ram_end;

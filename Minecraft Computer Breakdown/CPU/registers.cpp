@@ -4,22 +4,31 @@
 #include "exceptions.h"
 
 
-U32 Registers::read(const U8 register_id) const 
+U32 Registers::read(const Register register_id) const
 {
-	if (register_id < 8) {
-		return read_32(register_id);
+	U8 register_index = static_cast<U8>(register_id) % 8;
+
+	if (register_id <= Register::EDI) {
+		return registers[register_index];
 	}
-	else if (register_id < 16) {
-		return read_16(register_id);
+	else if (register_id <= Register::DI) {
+		return registers[register_index] & 0xFFFF;
 	}
-	else if (register_id < 20) {
-		return read_8_High(register_id);
+	else if (register_id <= Register::BL) {
+		return registers[register_index] & 0xFF;
 	}
-	else if (register_id < 24) {
-		return read_8_Low(register_id);
+	else if (register_id <= Register::BH) {
+		return (registers[register_index] & 0xFF00) >> 8;
+	}
+	else if (register_id <= Register::GS) {
+		return segments[register_index];
+	}
+	else if (register_id <= Register::CR1) {
+		// We can tell apart CR0 and CR1 from their last bit
+		return control_registers[register_index & 0b001];
 	}
 	else {
-		throw RegisterException("Wrong register id", register_id);
+		throw RegisterException("Wrong register id", static_cast<U8>(register_id));
 	}
 }
 
@@ -46,27 +55,30 @@ U32 Registers::read_index(U8 register_index, OpSize size) const
 }
 
 
-void Registers::write(const U8 register_id, const U32 new_value, const U32 other_value)
+void Registers::write(const Register register_id, const U32 new_value)
 {
-	if (register_id < 8) {
-		write_32(register_id, new_value);
+	U8 register_index = static_cast<U8>(register_id) % 8;
+
+	if (register_id <= Register::EDI) {
+		registers[register_index] = new_value;
 	}
-	else if (register_id < 16) {
-		write_16(register_id, new_value);
+	else if (register_id <= Register::DI) {
+		registers[register_index] = (registers[register_index] & 0xFFFF0000) | new_value;
 	}
-	else if (register_id < 20) {
-		write_8_High(register_id, new_value);
+	else if (register_id <= Register::BL) {
+		registers[register_index] = (registers[register_index] & 0xFFFFFF00) | new_value;
 	}
-	else if (register_id < 24) {
-		write_8_Low(register_id, new_value);
+	else if (register_id <= Register::BH) {
+		registers[register_index] = (registers[register_index] & 0xFFFF00FF) | (new_value << 8);
 	}
-	else if (register_id == 24) {
-		// 64 bit assignment
-		write_32(0, new_value);
-		write_32(2, other_value);
+	else if (register_id <= Register::GS) {
+		segments[register_index] = new_value;
+	}
+	else if (register_id <= Register::CR1) {
+		throw RegisterException("Control registers cannot be set directly", static_cast<U8>(register_id));
 	}
 	else {
-		throw RegisterException("Wrong register id", register_id);
+		throw RegisterException("Wrong register id", static_cast<U8>(register_id));
 	}
 }
 

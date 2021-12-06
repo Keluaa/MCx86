@@ -1,5 +1,6 @@
 ﻿
 #include <iostream>
+#include <csignal>
 
 #include "CPU/CPU.h"
 #include "load_program.h"

@@ -251,7 +251,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		}
 		else {
 			U8 reversed_index = ALU::sub_no_carry(U8(7), index);
-			registers.write(reversed_index, val);
+			registers.write(static_cast<Register>(reversed_index), val);
 		}
 
 		if (!ALU::compare_equal(index, U8(7))) {
@@ -264,7 +264,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	case Opcodes::PUSHA:
 	{
 		if (ALU::check_equal_zero(index)) {
-			storage.pusha.esp = registers.read_index(Register::ESP, data.op_size);
+			storage.pusha.esp = registers.read_index(static_cast<U8>(Register::ESP), data.op_size);
 		}
 
 		if (ALU::compare_equal(index, U8(3))) {
