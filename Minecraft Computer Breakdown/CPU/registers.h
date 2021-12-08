@@ -12,14 +12,14 @@
  */
 enum class Register : U8
 {
-    EAX = 0,
-    ECX = 1,
-    EDX = 2,
-    EBX = 3,
-    ESP = 4,
-    EBP = 5,
-    ESI = 6,
-    EDI = 7,
+    EAX = 0b000, // 0
+    ECX = 0b001, // 1
+    EDX = 0b010, // 2
+    EBX = 0b011, // 3
+    ESP = 0b100, // 4
+    EBP = 0b101, // 5
+    ESI = 0b110, // 6
+    EDI = 0b111, // 7
 
     AX = 0b01000 | EAX,
     CX = 0b01000 | ECX,
@@ -51,6 +51,16 @@ enum class Register : U8
 };
 
 
+/**
+ * Returns true if the register 
+ */
+constexpr bit is_special_register(Register register_id)
+{
+	U8 category = static_cast<U8>(register_id) & 0b11000;
+	return ALU::compare_equal(category, U8(0b11000));
+}
+
+
 struct Registers
 {
     // TODO : branch multi-access checking
@@ -64,6 +74,7 @@ struct Registers
 	};
 
 	[[nodiscard]] U32 read(const Register register_id) const;
+	[[nodiscard]] U32 read(const Register register_id, OpSize size) const;
 	[[nodiscard]] U32 read_index(U8 register_index, OpSize size) const;
 	
 	void write(const Register register_val, const U32 new_value);

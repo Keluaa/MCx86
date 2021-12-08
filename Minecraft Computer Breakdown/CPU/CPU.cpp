@@ -31,7 +31,7 @@ void CPU::run(size_t max_cycles)
 	while (registers.EIP < instructions->size()) {
 		new_clock_cycle();
 		try {
-			execute_instruction(); // increments the EIP register
+			execute_instruction(); // handles the incrementation of the EIP register
 		}
 		catch (ExceptionWithMsg& e) {
 			std::cerr << e.what() << "\n";
@@ -54,7 +54,7 @@ void CPU::run(size_t max_cycles)
 void CPU::new_clock_cycle()
 {
 	clock_cycle_count++;
-	// TODO : maybe reset the branch monitor here
+	// TODO : reset the branch monitor here
 }
 
 
@@ -83,41 +83,43 @@ constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_
  */
 void CPU::execute_instruction()
 {
-	// TODO: I think I misunderstood what the address size override prefix: it only changes the size of the address,
-	//  not how many bytes are fetched from memory, which is also controlled by the operand size prefix 
 	const Inst& inst = instructions->at(registers.EIP); // TODO: low level instruction fetching
 	currentInstruction = &inst;
 
 	InstData data = inst.getInstData();
 	
-	// compute address using the mod r/m, SIB and displacement bytes
 	if (inst.should_compute_address()) {
 		data.address = compute_address();
 	}
 
-	// TODO : fetch the segment's D bit, maybe also store it and update it when there is a CS change
+	// Segment overrides for the operand and address sizes are always set to 32 bits, so they are ignored.
 	OpSize operand_size = get_size(inst.operand_size_override, inst.operand_byte_size_override);
 	OpSize address_size = OpSize::DW;
 
-	// TODO: use the computed address to read the operands. Also fix the operands size.
-	
 	// Read the operands
 	if (inst.op1.read) {
-        // TODO : rework this, handle data.op1_size
-		switch(inst.op1.type) {
+        switch(inst.op1.type) {
 		case OpType::REG:
-			data.op1_size = operand_size;
-			data.op1 = registers.read(inst.op1.reg);
-
-            // TODO : for special registers:
-            //  data.op1_size = OpSize::W; // all segment registers have a fixed length
-            //  data.op1_size = OpSize::DW; // for control registers
-
+			if (is_special_register(inst.op1.reg)) {
+				if (inst.op1.reg <= Register::GS) {
+					// All segment registers have a fixed length
+					data.op1_size = OpSize::W;
+				}
+				else {
+					// Control registers
+					data.op1_size = OpSize::DW;
+				}
+			}
+			else {
+				data.op1_size = operand_size;
+			}
+			
+			data.op1 = registers.read(inst.op1.reg, data.op1_size);
 			break;
 
 		case OpType::MEM:
-			data.op1_size = address_size;
-            data.op1 = memory->read(inst.address_value, data.op1_size);
+			data.op1_size = operand_size;
+            data.op1 = memory->read(data.address, data.op1_size);
 			break;
 
 		case OpType::IMM:
@@ -126,26 +128,35 @@ void CPU::execute_instruction()
 			break;
 
         case OpType::IMM_MEM:
-            break;
+            data.op1_size = operand_size;
+            data.op1 = memory->read(inst.address_value, data.op1_size);
+			break;
 		}
 	}
 
 	if (inst.op2.read) {
-        // TODO : rework this, handle data.op2_size
-		switch(inst.op2.type) {
+        switch(inst.op2.type) {
 		case OpType::REG:
-			data.op2_size = operand_size;
-			data.op2 = registers.read(inst.op2.reg);
-
-            // TODO : for special registers:
-            //  data.op1_size = OpSize::W; // all segment registers have a fixed length
-            //  data.op1_size = OpSize::DW; // for control registers
-
+			if (is_special_register(inst.op2.reg)) {
+				if (inst.op2.reg <= Register::GS) {
+					// All segment registers have a fixed length
+					data.op2_size = OpSize::W;
+				}
+				else {
+					// Control registers
+					data.op2_size = OpSize::DW;
+				}
+			}
+			else {
+				data.op2_size = operand_size;
+			}
+			
+			data.op2 = registers.read(inst.op2.reg, data.op2_size);
 			break;
 
 		case OpType::MEM:
-			data.op2_size = address_size;
-			data.op2 = memory->read(inst.address_value, data.op2_size);
+			data.op2_size = operand_size;
+			data.op2 = memory->read(data.address, data.op2_size);
 			break;
 
 		case OpType::IMM:
@@ -154,25 +165,27 @@ void CPU::execute_instruction()
 			break;
 
         case OpType::IMM_MEM:
-            break;
+            data.op2_size = operand_size;
+			data.op2 = memory->read(inst.address_value, data.op2_size);
+			break;
 		}
 	}
 
-	// get the flags registers if needed
+	// Get the flags registers if needed
 	EFLAGS flags;
 	if (inst.get_flags) {
 	    flags.value = registers.EFLAGS;
 	}
 	
-	// execute the instruction
+	// Execute the instruction
 	U32 return_value = 0;
 	U32 return_value_2 = 0;
 	if (inst.opcode & Opcodes::not_arithmetic) {
-		// non-trivial op
+		// Non-trivial op
 		data.op_size = operand_size;
 
 		if (inst.opcode & Opcodes::state_machine) {
-			// include all state machine, jump and string instructions
+			// Include all state machine, jump and string instructions
 			execute_non_arithmetic_instruction_with_state_machine(inst.opcode, data, flags);
 		}
 		else {
@@ -188,7 +201,7 @@ void CPU::execute_instruction()
 		registers.EFLAGS = flags.value;
 	}
 
-	// write the output of the instruction to its destination
+	// Write the output of the instruction to its destination
 	if (inst.write_ret1_to_op1) {
 		switch (inst.op1.type) {
 		case OpType::REG:

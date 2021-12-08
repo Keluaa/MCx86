@@ -1,4 +1,4 @@
-
+﻿
 #include "registers.h"
 
 #include "exceptions.h"
@@ -6,7 +6,7 @@
 
 U32 Registers::read(const Register register_id) const
 {
-	U8 register_index = static_cast<U8>(register_id) % 8;
+	U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
 
 	if (register_id <= Register::EDI) {
 		return registers[register_index];
@@ -30,6 +30,13 @@ U32 Registers::read(const Register register_id) const
 	else {
 		throw RegisterException("Wrong register id", static_cast<U8>(register_id));
 	}
+}
+
+
+U32 Registers::read(const Register register_id, OpSize size) const
+{
+	U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
+	return read_index(register_index, size);
 }
 
 
