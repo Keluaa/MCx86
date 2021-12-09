@@ -82,13 +82,13 @@ void Registers::write(const Register register_id, const U32 new_value)
 		registers[register_index] = new_value;
 	}
 	else if (register_id <= Register::DI) {
-		registers[register_index] = (registers[register_index] & 0xFFFF0000) | new_value;
+		registers[register_index] |= new_value & 0xFFFF;
 	}
 	else if (register_id <= Register::BL) {
-		registers[register_index] = (registers[register_index] & 0xFFFFFF00) | new_value;
+		registers[register_index] |= new_value & 0x00FF;
 	}
 	else if (register_id <= Register::BH) {
-		registers[register_index] = (registers[register_index] & 0xFFFF00FF) | (new_value << 8);
+		registers[register_index] |= (new_value & 0x00FF) << 8;
 	}
 	else if (register_id <= Register::GS) {
 		segments[register_index] = new_value;
@@ -103,7 +103,17 @@ void Registers::write(const Register register_id, const U32 new_value)
 
 
 /**
- * Writes a scalable register (EAX, EDX, etc...)
+ * Writes to a scalable register (EAX, EDX, etc...) from its ID
+ */
+void Registers::write(const Register register_id, const U32 new_value, OpSize size)
+{
+    U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
+    return write_index(register_index, new_value, size);
+}
+
+
+/**
+ * Writes to a scalable register (EAX, EDX, etc...)
  */
 void Registers::write_index(U8 register_index, U32 value, OpSize size)
 {

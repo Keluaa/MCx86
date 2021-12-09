@@ -79,7 +79,7 @@ void print_operand(const Inst::Operand& op)
 void print_instruction(const Inst& inst)
 {
 	std::string opcode;
-	
+
 	auto it = Opcodes::mnemonics.find(inst.opcode);
 	if (it == Opcodes::mnemonics.cend()) {
 		opcode = "???";
@@ -88,7 +88,7 @@ void print_instruction(const Inst& inst)
 		opcode = it->second;
 	}
 
-	std::cout << " " << std::setw(4) << opcode << " ";
+	std::cout << " " << std::setw(5) << std::left << opcode << std::right << " ";
 
 	if (inst.operand_byte_size_override) {
 		std::cout << "S8 ";
@@ -96,7 +96,7 @@ void print_instruction(const Inst& inst)
 	else if (inst.operand_size_override) {
 		std::cout << "S16 ";
 	}
-	
+
 	if (inst.is_op1_none()) {
 		std::cout << ". ";
 	}
@@ -118,7 +118,7 @@ void print_instruction(const Inst& inst)
 		}
 		std::cout << register_to_str(inst.register_out) << " ";
 	}
-	
+
 	if (inst.should_compute_address()) {
 		std::cout << "ADDR ";
 		if (inst.address_value != 0) {
@@ -134,10 +134,13 @@ void print_instruction(const Inst& inst)
 }
 
 
-void print_instructions(const std::vector<Inst>* insts, int start, int count)
+void print_instructions(const std::vector<Inst>* insts, int start, size_t count, size_t address)
 {
 	for (int i = start; i < start + count; i++) {
+        std::cout << "0x"
+                  << std::hex << std::setfill('0') << std::setw(5) << address++
+                  << std::dec << std::setfill(' ')
+                  << "  ";
 		print_instruction((*insts)[i]);
-		std::cout.flush();
 	}
 }

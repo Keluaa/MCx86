@@ -73,7 +73,7 @@ namespace Opcodes
 	constexpr U8 XOR     = 53 | arithmetic;
 	
 	// Non arithmetic instructions
-		
+
 	constexpr U8 HLT     = 0 | not_arithmetic;
 	constexpr U8 IN      = 1 | not_arithmetic;
 	constexpr U8 LAR     = 2 | not_arithmetic;

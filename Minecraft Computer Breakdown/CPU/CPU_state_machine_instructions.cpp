@@ -62,7 +62,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.");
 
 		U32 eip = registers.read_EIP();
-		push(eip, OpSize::DW); // TODO : I think that this is a DW
+		push(eip, OpSize::DW);
 		eip = ALU::add_no_carry(eip, data.op1);
 		if (data.op1_size == OpSize::W) {
 			eip &= 0xFFFF; // keep only the first 2 bytes

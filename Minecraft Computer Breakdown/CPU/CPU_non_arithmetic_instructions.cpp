@@ -23,6 +23,7 @@ void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData dat
 	case Opcodes::HLT:
 	{
 		// TODO ? (here is also a privilege check to do)
+        halted = true;
 		break;
 	}
 	case Opcodes::IN:

@@ -78,6 +78,7 @@ struct Registers
 	[[nodiscard]] U32 read_index(U8 register_index, OpSize size) const;
 	
 	void write(const Register register_val, const U32 new_value);
+	void write(const Register register_val, const U32 new_value, OpSize size);
 	void write_index(U8 register_index, U32 value, OpSize size);
 
 

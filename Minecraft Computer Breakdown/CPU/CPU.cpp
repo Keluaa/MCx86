@@ -2,24 +2,34 @@
 #include <iostream>
 
 #include "../ALU.hpp"
+#include "../print_instructions.h"
 #include "CPU.h"
 #include "opcodes.h"
 
 
 CPU::CPU(Mem::Memory* memory)
-	: memory(memory),
-      instructions(memory->get_instructions())
+	: memory(memory)
 { }
 
 
-void CPU::switch_protected_mode(bit protected_)
+void CPU::startup()
 {
-	// TODO: see the startup process in the manual instead
-	CR0 control_register = registers.get_CR0();
+    // TODO: see the startup process in the manual instead
 
-	control_register.set_val(CR0::PE, protected_);
+    clock_cycle_count = 0;
+    halted = false;
 
-	registers.set_CR0(control_register);
+    // Setup CR0
+    CR0 control_register = registers.get_CR0();
+
+    // Enable protected mode
+    bit protected_ = true;
+    control_register.set_val(CR0::PE, protected_);
+    registers.set_CR0(control_register);
+
+    // Setup registers
+    registers.write(Register::ESP, memory->stack_end);
+    registers.write_EIP(memory->text_pos);
 }
 
 
@@ -28,7 +38,7 @@ void CPU::switch_protected_mode(bit protected_)
  */
 void CPU::run(size_t max_cycles)
 {
-	while (registers.EIP < instructions->size()) {
+	while (!halted) {
 		new_clock_cycle();
 		std::cout << "Cycle " << clock_cycle_count << "\n";
 		try {
@@ -84,10 +94,12 @@ constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_
  */
 void CPU::execute_instruction()
 {
-	const Inst& inst = instructions->at(registers.EIP); // TODO: low level instruction fetching
+    const Inst& inst = memory->fetch_instruction(registers.EIP);
 	currentInstruction = &inst;
 
-	InstData data{};
+    print_instruction(inst);
+
+    InstData data{};
 	
 	if (inst.should_compute_address()) {
 		data.address = compute_address();
@@ -95,13 +107,11 @@ void CPU::execute_instruction()
 	else {
 		data.address = inst.address_value;
 	}
-	
-	// TODO : load the immediate value only when ghere is no immediate operand (I think)
-	data.imm = inst.immediate_value;
 
-	// Segment overrides for the operand and address sizes are always set to 32 bits, so they are ignored.
+	// Segment overrides for the operand and are always set to 32 bits, so they are ignored.
 	OpSize operand_size = get_size(inst.operand_size_override, inst.operand_byte_size_override);
-	OpSize address_size = OpSize::DW;
+
+    // TODO : missing data.op3 value
 
 	bit immediate_loaded = false;
 	
@@ -139,7 +149,7 @@ void CPU::execute_instruction()
 
         case OpType::IMM_MEM:
             data.op1_size = operand_size;
-            data.op1 = memory->read(inst.address_value, data.op1_size);
+            data.op1 = inst.address_value;
 			break;
 		}
 	}
@@ -177,8 +187,8 @@ void CPU::execute_instruction()
 
         case OpType::IMM_MEM:
             data.op2_size = operand_size;
-			data.op2 = memory->read(inst.address_value, data.op2_size);
-			break;
+			data.op2 = inst.address_value;
+            break;
 		}
 	}
 	
@@ -233,8 +243,7 @@ void CPU::execute_instruction()
 
     if (inst.write_ret2_to_register) {
         if (inst.scale_output_override) {
-            // TODO : handle scaling with data.op1_size
-            registers.write(inst.register_out, return_value_2);
+            registers.write(inst.register_out, return_value_2, data.op1_size);
         }
         else {
             registers.write(inst.register_out, return_value_2);
@@ -323,7 +332,7 @@ void CPU::push(U32 value, OpSize size)
 	
 	registers.write(Register::ESP, esp);
 
-    memory->get_stack()->write(esp, value, size);
+    memory->write(esp, value, size);
 }
 
 

@@ -22,11 +22,13 @@ class Memory
 {
 	// TODO : branch multi-access checking
 
-	U32 text_pos, text_end;
-	U32 rom_pos, rom_end; 
-	U32 ram_pos, ram_end;
-	U32 stack_pos, stack_end;
-	
+public:
+	const U32 text_pos, text_end;
+	const U32 rom_pos, rom_end;
+	const U32 ram_pos, ram_end;
+	const U32 stack_pos, stack_end;
+
+private:
 	std::unique_ptr<U8> rom_bytes;
 	std::unique_ptr<U8> ram_bytes;
 	std::unique_ptr<U8> stack_bytes;
@@ -64,6 +66,14 @@ public:
     RAM<RAM_SIZE, U32>* get_RAM()               { return &ram; }
     Stack<STACK_SIZE>* get_stack()              { return &stack; }
     const std::vector<Inst>* get_instructions() { return &instructions; }
+
+    // TODO : low-level logic for memory accesses
+
+    [[nodiscard]]
+    const Inst& fetch_instruction(U32 address) const
+    {
+        return instructions.at(address - text_pos);
+    }
 
 	[[nodiscard]]
     U8* physical_at(U32 address) const

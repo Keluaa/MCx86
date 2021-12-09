@@ -25,10 +25,10 @@ class CPU
 
 	Interrupts::InterruptDescriptorTable<64>* interruptsTable = nullptr; // TODO
 
-    const std::vector<Inst>* const instructions;
 	const Inst* currentInstruction = nullptr;
 
 	U32 clock_cycle_count = 0;
+    bit halted = false;
 
 	void new_clock_cycle();
 	
@@ -66,8 +66,7 @@ public:
         delete io.get_bytes();
 	}
 
-	void switch_protected_mode(bit protected_ = true);
-
+	void startup();
 	void run(size_t max_cycles = std::numeric_limits<size_t>::max());
 	void execute_instruction();
 

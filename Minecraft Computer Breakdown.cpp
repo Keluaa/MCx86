@@ -88,9 +88,12 @@ void quick_exit_handler()
 }
 
 
-void exit_handler()
+void print_program_instructions(Mem::Memory* memory)
 {
-	std::cerr << "Program exited.";
+    std::cout << "Instructions:\n";
+    const std::vector<Inst>* insts = memory->get_instructions();
+    print_instructions(insts, 0, insts->size(), memory->text_pos);
+    std::cout << "\n";
 }
 
 
@@ -104,7 +107,6 @@ int main()
     signal(SIGINT, signal_handler);
     
     std::at_quick_exit(quick_exit_handler);
-    std::atexit(exit_handler);
 
     Mem::Memory* memory;
 
@@ -121,13 +123,11 @@ int main()
 
     std::cout << "Program loaded.\n";
 
-    std::cout << "Instructions:\n";
-    const std::vector<Inst>* insts = memory->get_instructions();
-    print_instructions(insts, 0, insts->size());
-    std::cout << "\n";
+    print_program_instructions(memory);
 
     try {
         CPU cpu(memory);
+        cpu.startup();
         cpu.run(1000);
     }
     catch (const std::exception& e) {
