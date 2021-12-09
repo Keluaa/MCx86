@@ -85,8 +85,6 @@ struct Inst
 	U32 immediate_value;
 
     Inst() = default;
-	
-	[[nodiscard]] InstData getInstData() const;
 
     // The Operand struct by itself cannot describe when it is not used, here is how to do it for both operands:
     [[nodiscard]] constexpr bool is_op1_none() const { return !op1.read && !write_ret1_to_op1; }

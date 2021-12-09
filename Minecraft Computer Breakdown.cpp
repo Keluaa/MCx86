@@ -1,6 +1,7 @@
 ﻿
 #include <iostream>
 #include <csignal>
+#include <execinfo.h>
 
 #include "CPU/CPU.h"
 #include "load_program.h"
@@ -58,9 +59,38 @@ static const char instructions_filename[] = "../executable_file_data/instruction
 /**
  * Basic signal handling to set the exit code as the signal code.
  */
+volatile std::sig_atomic_t gSignalStatus;
 void signal_handler(int sig)
 {
+	gSignalStatus = sig;
     std::quick_exit(sig);
+}
+
+
+void quick_exit_handler()
+{
+	if (gSignalStatus != 0) {
+		std::cerr << "Signal: ";
+		switch (gSignalStatus)
+		{
+		case SIGSEGV: std::cerr << "SIGSEGV"; break;
+		case SIGABRT: std::cerr << "SIGABRT"; break;
+		case SIGTERM: std::cerr << "SIGTERM"; break;
+		case SIGILL:  std::cerr << "SIGILL";  break;
+		case SIGFPE:  std::cerr << "SIGFPE";  break;
+		case SIGINT:  std::cerr << "SIGINT";  break;
+		default:      std::cerr << "unknown"; break;
+		}
+		std::cerr << "\n";
+	}
+	
+	std::cerr << "Program quick exited." << std::endl;
+}
+
+
+void exit_handler()
+{
+	std::cerr << "Program exited.";
 }
 
 
@@ -69,7 +99,12 @@ int main()
     signal(SIGSEGV, signal_handler);
     signal(SIGABRT, signal_handler);
     signal(SIGTERM, signal_handler);
+    signal(SIGILL, signal_handler);
+    signal(SIGFPE, signal_handler);
     signal(SIGINT, signal_handler);
+    
+    std::at_quick_exit(quick_exit_handler);
+    std::atexit(exit_handler);
 
     Mem::Memory* memory;
 

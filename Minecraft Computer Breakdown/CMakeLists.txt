@@ -28,7 +28,6 @@ set(SOURCE_FILES
         CPU/CPU_arithmetic_instructions.cpp
 		CPU/CPU_non_arithmetic_instructions.cpp
 		CPU/CPU_state_machine_instructions.cpp
-		CPU/instructions.cpp
 		CPU/registers.cpp)
 
 add_library(Minecraft_Computer_Breakdown_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

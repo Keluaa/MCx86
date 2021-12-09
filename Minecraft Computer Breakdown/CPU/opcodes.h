@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <map>
+#include <string>
+
 #include "../data_types.h"
 
 
@@ -126,4 +129,49 @@ namespace Opcodes
 	// TODO : check usefulness
 	constexpr U8 IMULX   = 54 | arithmetic; // used after IMUL or MUL on 32 bit operands, to extend the result to 64 bit
 	constexpr U8 MULX    = 55 | arithmetic; // used to perform 64 bit multiplication
+	
+	//  Mnemonics
+	std::map<U8, std::string> mnemonics{
+		{ AAA, "AAA" },
+		{ AAD, "AAD" },
+		{ AAM, "AAM" },
+		
+		{ ADC, "ADC" },
+		{ ADD, "ADD" },
+		{ AND, "AND" },
+		
+		{ CMP, "CMP" },
+		
+		{ DIV, "DIV" },
+		{ IDIV, "IDIV" },
+		{ IMUL, "IMUL" },
+		
+		{ LEA, "LEA" },
+		{ MOV, "MOV" },
+		{ MOVSX, "MOVSX" },
+		{ MOVZX, "MOVZX" },
+		{ MUL, "MUL" },
+		
+		{ NOT, "NOT" },
+		{ OR, "OR" },
+		
+		{ SETcc, "SETcc" },
+		
+		{ SUB, "SUB" },
+		
+		{ XCHG, "XCHG" },
+		
+		{ HLT, "HLT" },
+		
+		{ POP, "POP" },
+		{ PUSH, "PUSH" },
+		
+		{ CALL, "CALL" },
+		{ INT, "INT" },
+		
+		{ Jcc, "Jcc" },
+		{ JMP, "JMP" },
+		
+		{ RET, "RET" },
+	};
 }

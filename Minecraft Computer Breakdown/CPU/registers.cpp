@@ -4,6 +4,9 @@
 #include "exceptions.h"
 
 
+/**
+ * Reads a register from its ID
+ */
 U32 Registers::read(const Register register_id) const
 {
 	U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
@@ -33,6 +36,9 @@ U32 Registers::read(const Register register_id) const
 }
 
 
+/**
+ * Reads a scalable register (EAX, EDX, etc...) from its ID
+ */
 U32 Registers::read(const Register register_id, OpSize size) const
 {
 	U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
@@ -40,6 +46,9 @@ U32 Registers::read(const Register register_id, OpSize size) const
 }
 
 
+/**
+ * Reads a scalable register (EAX, EDX, etc...)
+ */
 U32 Registers::read_index(U8 register_index, OpSize size) const
 {
 	switch (size)
@@ -62,6 +71,9 @@ U32 Registers::read_index(U8 register_index, OpSize size) const
 }
 
 
+/**
+ * Writes a register from its ID
+ */
 void Registers::write(const Register register_id, const U32 new_value)
 {
 	U8 register_index = static_cast<U8>(register_id) % 8;
@@ -90,6 +102,9 @@ void Registers::write(const Register register_id, const U32 new_value)
 }
 
 
+/**
+ * Writes a scalable register (EAX, EDX, etc...)
+ */
 void Registers::write_index(U8 register_index, U32 value, OpSize size)
 {
 	switch (size)

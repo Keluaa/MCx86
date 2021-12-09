@@ -30,6 +30,7 @@ void CPU::run(size_t max_cycles)
 {
 	while (registers.EIP < instructions->size()) {
 		new_clock_cycle();
+		std::cout << "Cycle " << clock_cycle_count << "\n";
 		try {
 			execute_instruction(); // handles the incrementation of the EIP register
 		}
@@ -86,16 +87,24 @@ void CPU::execute_instruction()
 	const Inst& inst = instructions->at(registers.EIP); // TODO: low level instruction fetching
 	currentInstruction = &inst;
 
-	InstData data = inst.getInstData();
+	InstData data{};
 	
 	if (inst.should_compute_address()) {
 		data.address = compute_address();
 	}
+	else {
+		data.address = inst.address_value;
+	}
+	
+	// TODO : load the immediate value only when ghere is no immediate operand (I think)
+	data.imm = inst.immediate_value;
 
 	// Segment overrides for the operand and address sizes are always set to 32 bits, so they are ignored.
 	OpSize operand_size = get_size(inst.operand_size_override, inst.operand_byte_size_override);
 	OpSize address_size = OpSize::DW;
 
+	bit immediate_loaded = false;
+	
 	// Read the operands
 	if (inst.op1.read) {
         switch(inst.op1.type) {
@@ -125,6 +134,7 @@ void CPU::execute_instruction()
 		case OpType::IMM:
 			data.op1_size = operand_size;
 			data.op1 = inst.immediate_value;
+			immediate_loaded = true;
 			break;
 
         case OpType::IMM_MEM:
@@ -162,6 +172,7 @@ void CPU::execute_instruction()
 		case OpType::IMM:
 			data.op2_size = operand_size;
 			data.op2 = inst.immediate_value;
+			immediate_loaded = true;
 			break;
 
         case OpType::IMM_MEM:
@@ -170,7 +181,12 @@ void CPU::execute_instruction()
 			break;
 		}
 	}
-
+	
+	if (!immediate_loaded) {
+		// Load the immediate value only if it has not been stored in an operand already
+		data.imm = inst.immediate_value;
+	}
+	
 	// Get the flags registers if needed
 	EFLAGS flags;
 	if (inst.get_flags) {
@@ -251,12 +267,9 @@ U32 CPU::compute_address() const
 
     U32 index_address = 0;
     if (currentInstruction->reg_present) {
-        // TODO : there is something strange, if mod == 0b11, then we simply take its value without accessing the memory
-        //  yet there is no case where we do that, while this is the most common case
-
         index_address = registers.read(static_cast<Register>(currentInstruction->reg));
 
-        // scale the index using chained shifters
+        // Scale the index using chained shifters
         switch (currentInstruction->scale)
         {
             case 0b11: index_address <<= 1; [[fallthrough]]; // *8 NOLINT(bugprone-branch-clone)
