@@ -5,6 +5,7 @@ set(HEADER_FILES
         ALU.hpp
 		data_types.h
 		load_program.h
+		print_instructions.h
 		CPU/CPU.h
 		CPU/exceptions.h
 		CPU/instructions.h
@@ -24,6 +25,7 @@ set(HEADER_FILES
 
 set(SOURCE_FILES
 		load_program.cpp
+		print_instructions.cpp
 		CPU/CPU.cpp
         CPU/CPU_arithmetic_instructions.cpp
 		CPU/CPU_non_arithmetic_instructions.cpp

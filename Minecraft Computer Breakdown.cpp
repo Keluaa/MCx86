@@ -5,6 +5,7 @@
 
 #include "CPU/CPU.h"
 #include "load_program.h"
+#include "print_instrucions.h"
 
 
 /*
@@ -120,6 +121,10 @@ int main()
     }
 
     std::cout << "Program loaded.\n";
+
+    std::cout << "Instructions:\n";
+    print_instructions(memory.get_instructions(), 0, memory.get_instructions().size());
+    std::cout << "\n";
 
     try {
         CPU cpu(memory);
