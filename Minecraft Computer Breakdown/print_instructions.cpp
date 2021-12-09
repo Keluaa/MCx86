@@ -11,11 +11,11 @@ std::string optype_to_str(OpType type)
 {
 	switch (type)
 	{
-	case OpType::REG: return "REG";
-	case OpType::MEM: return "MEM";
-	case OpType::IMM: return "IMM";
+	case OpType::REG:     return "REG";
+	case OpType::MEM:     return "MEM";
+	case OpType::IMM:     return "IMM";
 	case OpType::IMM_MEM: return "IMM_MEM";
-	default:          return "???";
+	default:              return "???";
 	}
 }
 
@@ -56,7 +56,7 @@ std::string register_to_str(Register reg)
 	case Register::GS:  return "GS";
 	case Register::CR0: return "CR0";
 	case Register::CR1: return "CR1";
-	default:            return "???";
+	default:            return "??";
 	}
 }
 
@@ -76,11 +76,11 @@ void print_operand(const Inst::Operand& op)
 }
 
 
-void print_instruction(const Inst* inst)
+void print_instruction(const Inst& inst)
 {
 	std::string opcode;
 	
-	auto it = Opcodes::mnemonics.find(inst->opcode);
+	auto it = Opcodes::mnemonics.find(inst.opcode);
 	if (it == Opcodes::mnemonics.cend()) {
 		opcode = "???";
 	}
@@ -88,46 +88,46 @@ void print_instruction(const Inst* inst)
 		opcode = it->second;
 	}
 
-	std::cout << " " << opcode << " ";
+	std::cout << " " << std::setw(4) << opcode << " ";
 
-	if (inst->operand_byte_size_override) {
+	if (inst.operand_byte_size_override) {
 		std::cout << "S8 ";
 	}
-	else if (inst->operand_size_override) {
+	else if (inst.operand_size_override) {
 		std::cout << "S16 ";
 	}
 	
-	if (inst->is_op1_none()) {
+	if (inst.is_op1_none()) {
 		std::cout << ". ";
 	}
 	else {
-		print_operand(inst->op1);
+		print_operand(inst.op1);
 	}
 
-	if (inst->is_op2_none()) {
+	if (inst.is_op2_none()) {
 		std::cout << ". ";
 	}
 	else {
-		print_operand(inst->op2);
+		print_operand(inst.op2);
 	}
 
-	if (inst->write_ret2_to_register) {
+	if (inst.write_ret2_to_register) {
 		std::cout << "OUT ";
-		if (inst->scale_output_override) {
+		if (inst.scale_output_override) {
 			std::cout << "s";
 		}
-		std::cout << register_to_str(inst->register_out) << " ";
+		std::cout << register_to_str(inst.register_out) << " ";
 	}
 	
-	if (inst->should_compute_address()) {
+	if (inst.should_compute_address()) {
 		std::cout << "ADDR ";
-		if (inst->address_value != 0) {
-			std::cout << "0x" << std::hex << inst->address_value << " ";
+		if (inst.address_value != 0) {
+			std::cout << "0x" << std::hex << inst.address_value << " ";
 		}
 	}
 
-	if (inst->immediate_value != 0) {
-		std::cout << "IMM 0x" << std::hex << inst->immediate_value << " ";
+	if (inst.immediate_value != 0) {
+		std::cout << "IMM 0x" << std::hex << inst.immediate_value << " ";
 	}
 
 	std::cout << "\n";
@@ -137,6 +137,7 @@ void print_instruction(const Inst* inst)
 void print_instructions(const std::vector<Inst>* insts, int start, int count)
 {
 	for (int i = start; i < start + count; i++) {
-		print_instruction(insts[i]);
+		print_instruction((*insts)[i]);
+		std::cout.flush();
 	}
 }

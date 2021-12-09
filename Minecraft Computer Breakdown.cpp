@@ -1,11 +1,10 @@
 ﻿
 #include <iostream>
 #include <csignal>
-#include <execinfo.h>
 
 #include "CPU/CPU.h"
 #include "load_program.h"
-#include "print_instrucions.h"
+#include "print_instructions.h"
 
 
 /*
@@ -123,7 +122,8 @@ int main()
     std::cout << "Program loaded.\n";
 
     std::cout << "Instructions:\n";
-    print_instructions(memory.get_instructions(), 0, memory.get_instructions().size());
+    const std::vector<Inst>* insts = memory->get_instructions();
+    print_instructions(insts, 0, insts->size());
     std::cout << "\n";
 
     try {

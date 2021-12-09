@@ -131,47 +131,5 @@ namespace Opcodes
 	constexpr U8 MULX    = 55 | arithmetic; // used to perform 64 bit multiplication
 	
 	//  Mnemonics
-	std::map<U8, std::string> mnemonics{
-		{ AAA, "AAA" },
-		{ AAD, "AAD" },
-		{ AAM, "AAM" },
-		
-		{ ADC, "ADC" },
-		{ ADD, "ADD" },
-		{ AND, "AND" },
-		
-		{ CMP, "CMP" },
-		
-		{ DIV, "DIV" },
-		{ IDIV, "IDIV" },
-		{ IMUL, "IMUL" },
-		
-		{ LEA, "LEA" },
-		{ MOV, "MOV" },
-		{ MOVSX, "MOVSX" },
-		{ MOVZX, "MOVZX" },
-		{ MUL, "MUL" },
-		
-		{ NOT, "NOT" },
-		{ OR, "OR" },
-		
-		{ SETcc, "SETcc" },
-		
-		{ SUB, "SUB" },
-		
-		{ XCHG, "XCHG" },
-		
-		{ HLT, "HLT" },
-		
-		{ POP, "POP" },
-		{ PUSH, "PUSH" },
-		
-		{ CALL, "CALL" },
-		{ INT, "INT" },
-		
-		{ Jcc, "Jcc" },
-		{ JMP, "JMP" },
-		
-		{ RET, "RET" },
-	};
+	extern std::map<U8, std::string> mnemonics;
 }
