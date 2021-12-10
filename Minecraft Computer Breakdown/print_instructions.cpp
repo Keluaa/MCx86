@@ -61,11 +61,15 @@ std::string register_to_str(Register reg)
 }
 
 
-void print_operand(const Inst::Operand& op)
+void print_operand(const Inst& inst, const Inst::Operand& op)
 {
 	std::cout << optype_to_str(op.type) << " ";
-	if (op.type == OpType::REG) {
-		std::cout << register_to_str(op.reg) << " ";
+	switch (op.type) {
+	case OpType::REG: 
+		std::cout << register_to_str(op.reg) << " "; 
+		break;
+	default:
+		break;
 	}
 	if (op.read) {
 		std::cout << "R ";
@@ -101,14 +105,14 @@ void print_instruction(const Inst& inst)
 		std::cout << ". ";
 	}
 	else {
-		print_operand(inst.op1);
+		print_operand(inst, inst.op1);
 	}
 
 	if (inst.is_op2_none()) {
 		std::cout << ". ";
 	}
 	else {
-		print_operand(inst.op2);
+		print_operand(inst, inst.op2);
 	}
 
 	if (inst.write_ret2_to_register) {
@@ -119,13 +123,10 @@ void print_instruction(const Inst& inst)
 		std::cout << register_to_str(inst.register_out) << " ";
 	}
 
-	if (inst.should_compute_address()) {
-		std::cout << "ADDR ";
-		if (inst.address_value != 0) {
-			std::cout << "0x" << std::hex << inst.address_value << " ";
-		}
+	if (inst.address_value != 0) {
+		std::cout << "ADDR 0x" << std::hex << inst.address_value << " ";
 	}
-
+		
 	if (inst.immediate_value != 0) {
 		std::cout << "IMM 0x" << std::hex << inst.immediate_value << " ";
 	}

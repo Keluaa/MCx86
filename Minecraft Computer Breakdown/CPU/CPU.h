@@ -32,7 +32,7 @@ class CPU
 
 	void new_clock_cycle();
 	
-	[[nodiscard]] static constexpr OpSize get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment = false);
+	[[nodiscard]] static constexpr OpSize get_size(bit size_override, bit byte_size_override);
 	
 	void execute_arithmetic_instruction(U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2);
 	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2);

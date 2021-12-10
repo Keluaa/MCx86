@@ -70,18 +70,18 @@ void CPU::new_clock_cycle()
 
 
 /**
- * Returns the size of an operand, using the prefixes of the instruction, as well as the D flag in the current segment.
+ * Returns the size of an operand, using the size overrides of the instruction.
  */
-constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override, bit D_flag_code_segment)
+constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override)
 {
 	if (byte_size_override) {
 		return OpSize::B;
 	}
-	else if (size_override ^ D_flag_code_segment) {
-		return OpSize::DW;
+	else if (size_override) {
+		return OpSize::W;
 	}
 	else {
-		return OpSize::W;
+		return OpSize::DW;
 	}
 }
 
