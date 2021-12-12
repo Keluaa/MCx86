@@ -29,9 +29,9 @@ public:
 	const U32 stack_pos, stack_end;
 
 private:
-	std::unique_ptr<U8> rom_bytes;
-	std::unique_ptr<U8> ram_bytes;
-	std::unique_ptr<U8> stack_bytes;
+	std::unique_ptr<U8[]> rom_bytes;
+	std::unique_ptr<U8[]> ram_bytes;
+	std::unique_ptr<U8[]> stack_bytes;
 	
 	ROM<ROM_SIZE> rom;
 	RAM<RAM_SIZE, U32> ram;
@@ -52,7 +52,7 @@ public:
 		  ram_pos(rom_end), ram_end(ram_pos + RAM_SIZE),
 		  stack_pos(ram_end), stack_end(stack_pos + STACK_SIZE),
 		  rom_bytes(rom_bytes), ram_bytes(ram_bytes),
-          stack_bytes(std::make_unique<U8>(STACK_SIZE)),
+          stack_bytes(std::make_unique<U8[]>(STACK_SIZE)),
 		  rom(rom_bytes),
 		  ram(ram_bytes),
 		  stack(stack_bytes.get()),
