@@ -52,7 +52,7 @@ public:
 		  ram_pos(rom_end), ram_end(ram_pos + RAM_SIZE),
 		  stack_pos(ram_end), stack_end(stack_pos + STACK_SIZE),
 		  rom_bytes(rom_bytes), ram_bytes(ram_bytes),
-		  stack_bytes(std::make_unique<U8>(STACK_SIZE)),
+          stack_bytes(std::make_unique<U8>(STACK_SIZE)),
 		  rom(rom_bytes),
 		  ram(ram_bytes),
 		  stack(stack_bytes.get()),

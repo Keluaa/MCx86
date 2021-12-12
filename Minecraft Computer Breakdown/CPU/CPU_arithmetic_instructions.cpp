@@ -9,9 +9,9 @@
  * @param data Holds instruction information
  * @param flags EFLAGS register
  * @param ret Return value of the instruction
- * @param ret2 Additional return value of the instruction
+ * @param ret_2 Additional return value of the instruction
  */
-void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2)
+void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret_2)
 {
 	switch (opcode) // we could consider only the first 7 bits of the opcode
 	{
@@ -54,8 +54,8 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	case Opcodes::AAM:
 	{
 		U8 q, r;
-		bit divByZero;
-		ALU::unsigned_divide(U8(data.op1 & 0xFF), (U8)10, q, r, divByZero);
+		bit div_by_zero;
+		ALU::unsigned_divide(U8(data.op1 & 0xFF), (U8)10, q, r, div_by_zero);
 
 		ret = (q << 8) | r;
 
@@ -208,12 +208,12 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	{
 	    // The OpSize of op1 is the one we want to convert to, the previous size is half of it
 		if (data.op1_size == OpSize::W) {
-			U8 al = data.op1;
-			ret = ALU::sign_extend((U16) al, OpSize::B);
+			U8 AL = data.op1;
+			ret = ALU::sign_extend((U16) AL, OpSize::B);
 		}
 		else {
-			U16 ax = data.op1;
-			ret = ALU::sign_extend((U32) ax, OpSize::W);
+			U16 AX = data.op1;
+			ret = ALU::sign_extend((U32) AX, OpSize::W);
 		}
 		break;
 	}
@@ -340,29 +340,29 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	case Opcodes::DIV:
 	{
 		U32 r, q, n = data.op1, d = data.op2;
-		bit divByZero = false;
-		ALU::unsigned_divide(n, d, q, r, divByZero);
+		bit div_by_zero = false;
+		ALU::unsigned_divide(n, d, q, r, div_by_zero);
 
-		if (divByZero) {
+		if (div_by_zero) {
             throw_exception(Interrupts::DivideError);
 		}
 
 		ret = q;
-		ret2 = r;
+        ret_2 = r;
 		break;
 	}
 	case Opcodes::IDIV:
 	{
 		U32 r, q, n = data.op1, d = data.op2;
-		bit divByZero = false;
-		ALU::signed_divide(n, d, q, r, divByZero);
+		bit div_by_zero = false;
+		ALU::signed_divide(n, d, q, r, div_by_zero);
 
-		if (divByZero) {
+		if (div_by_zero) {
             throw_exception(Interrupts::DivideError);
 		}
 
 		ret = q;
-		ret2 = r;
+        ret_2 = r;
 		break;
 	}
 	case Opcodes::IMUL:
@@ -469,7 +469,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 		bit overflow = 0;
 		r = ALU::multiply(a, b, overflow);
 		ret = U32(r);
-		ret2 = U32(r >> 32);
+        ret_2 = U32(r >> 32);
 
 		// set both the carry and the overflow flag
         flags.set_val(EFLAGS::CF | EFLAGS::OF, overflow);
@@ -617,11 +617,11 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
     }
     case Opcodes::SBB:
 	{
-		U32 op2 = ALU::sign_extend(data.op2, data.op2_size);
+		U32 op_2 = ALU::sign_extend(data.op2, data.op2_size);
 
 		bit carry = flags.get(EFLAGS::CF);
-		op2 = ALU::add(op2, 0, carry);
-		ret = ALU::sub(data.op1, op2, carry);
+        op_2 = ALU::add(op_2, 0, carry);
+		ret = ALU::sub(data.op1, op_2, carry);
 
 		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
 		break;
@@ -774,10 +774,10 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	}
 	case Opcodes::SUB:
 	{
-		U32 op2 = ALU::sign_extend(data.op2, data.op2_size);
+		U32 op_2 = ALU::sign_extend(data.op2, data.op2_size);
 
 		bit carry = 0;
-		ret = ALU::sub(data.op1, op2, carry);
+		ret = ALU::sub(data.op1, op_2, carry);
 
 		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
 		break;
@@ -795,7 +795,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	case Opcodes::XCHG:
 	{
 		ret = data.op2;
-		ret2 = data.op1;
+        ret_2 = data.op1;
 		break;
 	}
 	case Opcodes::XLAT:
@@ -822,4 +822,3 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	// increment EIP at the end of those instructions
 	registers.write_EIP(ALU::add_no_carry(registers.EIP, 1));
 }
-

@@ -23,8 +23,8 @@ void CPU::startup()
     CR0 control_register = registers.get_CR0();
 
     // Enable protected mode
-    bit protected_ = true;
-    control_register.set_val(CR0::PE, protected_);
+    bit protected_mode = true;
+    control_register.set_val(CR0::PE, protected_mode);
     registers.set_CR0(control_register);
 
     // Setup registers
@@ -95,14 +95,22 @@ constexpr OpSize CPU::get_size(bit size_override, bit byte_size_override)
 void CPU::execute_instruction()
 {
     const Inst& inst = memory->fetch_instruction(registers.EIP);
-	currentInstruction = &inst;
+    current_instruction = &inst;
 
-    print_instruction(inst);
+    print_instruction(registers.EIP, inst);
 
     InstData data{};
-	
-	if (inst.should_compute_address()) {
-		data.address = compute_address();
+
+	if (inst.compute_address) {
+        if (inst.op1.type == OpType::MEM) {
+            data.address = compute_address(static_cast<U8>(inst.op1.reg));
+        }
+        else if (inst.op2.type == OpType::MEM) {
+            data.address = compute_address(static_cast<U8>(inst.op2.reg));
+        }
+        else {
+            throw BadInstruction("'compute_address' is true, but there is no memory operand", registers.EIP);
+        }
 	}
 	else {
 		data.address = inst.address_value;
@@ -267,38 +275,33 @@ void CPU::execute_instruction()
 /**
  * Computes the effective address of the address operand of the current instruction.
  */
-U32 CPU::compute_address() const
+U32 CPU::compute_address(U8 register_field) const
 {
-	U32 address = 0;
-    if (currentInstruction->displacement_present) {
-        address = currentInstruction->address_value;
+	U32 address = current_instruction->address_value;
+
+    if (current_instruction->base_reg_present) {
+        U8 base_reg_index = register_field & 0b00111;
+        U32 base_value = registers.read_index(base_reg_index, OpSize::DW);
+        address = ALU::add_no_carry(address, base_value);
     }
 
-    U32 index_address = 0;
-    if (currentInstruction->reg_present) {
-        index_address = registers.read(static_cast<Register>(currentInstruction->reg));
+    if (current_instruction->scaled_reg_present) {
+        U32 scaled_value = registers.read_index(current_instruction->scaled_reg, OpSize::DW);
+        U8 scale = (register_field & 0b11000) >> 3;
 
         // Scale the index using chained shifters
-        switch (currentInstruction->scale)
+        switch (scale)
         {
-            case 0b11: index_address <<= 1; [[fallthrough]]; // *8 NOLINT(bugprone-branch-clone)
-            case 0b10: index_address <<= 1; [[fallthrough]]; // *4
-            case 0b01: index_address <<= 1; [[fallthrough]]; // *2
-            default:   break;							     // *1
+        case 0b11: scaled_value <<= 1; [[fallthrough]]; // *8 NOLINT(bugprone-branch-clone)
+        case 0b10: scaled_value <<= 1; [[fallthrough]]; // *4
+        case 0b01: scaled_value <<= 1; [[fallthrough]]; // *2
+        default:   break;							    // *1
         }
+
+        address = ALU::add_no_carry(address, scaled_value);
     }
 
-    if (currentInstruction->base_present) {
-        U32 base = registers.read_index(currentInstruction->base_reg, OpSize::DW);
-        index_address = ALU::add_no_carry(index_address, base);
-    }
-
-    if (currentInstruction->reg_present || currentInstruction->base_present) {
-        U32 index = memory->read(index_address, OpSize::DW);
-        address = ALU::add_no_carry(address, index);
-    }
-
-	return address;
+    return address;
 }
 
 
@@ -313,7 +316,7 @@ void CPU::push(U32 value, OpSize size)
 	U32 esp = registers.read(Register::ESP);
 	
 	if (size == OpSize::UNKNOWN) {
-		size = get_size(currentInstruction->operand_size_override, 0);
+		size = get_size(current_instruction->operand_size_override, 0);
 	}
 		
 	switch (size)
@@ -339,7 +342,6 @@ void CPU::push(U32 value, OpSize size)
 /**
  * Pop a value from the stack.
  * @param size The size of the value.
- * @return The value popped
  */
 U32 CPU::pop(OpSize size)
 {
@@ -347,7 +349,7 @@ U32 CPU::pop(OpSize size)
 	U32 esp = registers.read(Register::ESP);
 
 	if (size == OpSize::UNKNOWN) {
-		size = get_size(currentInstruction->operand_size_override, 0);
+		size = get_size(current_instruction->operand_size_override, 0);
 	}
 
     U32 val = memory->read(esp, size);
@@ -423,17 +425,17 @@ void CPU::interrupt(Interrupts::Interrupt interrupt)
 /**
  * Utility function used to update the value of the adjust flag, after a arithmetic operation using the value of the AL register.
  */
-void CPU::update_adjust_flag(EFLAGS& flags, U32 op1, U32 op2)
+void CPU::update_adjust_flag(EFLAGS& flags, U32 op_1, U32 op_2)
 {
 	/*
 	Adjust flag is set only if there were a carry from the first 4 bits of the AL register to the 4 other bits.
 	It is 0 otherwise, including when the operation didn't use the AL register.
 	This function should only be called with instructions modifying the AL register (or AX and EAX, but not AH).
 	*/
-	if (currentInstruction->op1.type == OpType::REG && currentInstruction->op1_reg_index() == 0) {
+	if (current_instruction->op1.type == OpType::REG && current_instruction->op1_reg_index() == 0) {
 		// Not the implementation used in the circuit, which is much simpler,
 		// as this flag can come out from the adder directly.
-		bit AF = (op1 & 0x0F) + (op2 & 0x0F) > 0x0F; // TODO : check operation order with the manual
+		bit AF = (op_1 & 0x0F) + (op_2 & 0x0F) > 0x0F; // TODO : check operation order with the manual
 		flags.set_val(EFLAGS::AF, AF);
 	}
 	else {
@@ -445,15 +447,15 @@ void CPU::update_adjust_flag(EFLAGS& flags, U32 op1, U32 op2)
 /**
  * Utility function used to update all arithmetic flags.
  */
-void CPU::update_status_flags(EFLAGS& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry)
+void CPU::update_status_flags(EFLAGS& flags, U32 op_1, U32 op_2, U32 result, OpSize op_1_size, OpSize op_2_size, OpSize ret_size, bit carry)
 {
 	// updates all status flags
-	flags.update_overflow_flag(op1, op2, result, op1Size, op2Size, retSize);
-	flags.update_sign_flag(result, retSize);
+	flags.update_overflow_flag(op_1, op_2, result, op_1_size, op_2_size, ret_size);
+	flags.update_sign_flag(result, ret_size);
 	flags.update_zero_flag(result);
 	flags.update_parity_flag(result);
     flags.set_val(EFLAGS::CF, carry);
-    update_adjust_flag(flags, op1, op2);
+    update_adjust_flag(flags, op_1, op_2);
 }
 
 

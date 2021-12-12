@@ -26,6 +26,9 @@ public:
 		  memory(bytes)
 	{ }
 
+    [[maybe_unused, nodiscard]] constexpr U32 get_size() const { return N; }
+    [[maybe_unused, nodiscard]] constexpr U32 get_granularity() const { return sizeof(Granularity); }
+
 	template<class T, class... Args>
 	T* allocate(Args&&... args)
 	{

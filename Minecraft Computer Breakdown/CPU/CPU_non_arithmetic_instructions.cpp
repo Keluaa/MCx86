@@ -1,6 +1,4 @@
 ﻿
-#include <iostream>
-
 #include "../ALU.hpp"
 #include "CPU.h"
 #include "opcodes.h"
@@ -12,9 +10,9 @@
  * @param data Holds instruction information
  * @param flags EFLAGS register
  * @param ret Return value of the instruction
- * @param ret2 Additional return value of the instruction
+ * @param ret_2 Additional return value of the instruction
  */
-void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2)
+void CPU::execute_non_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret_2)
 {
 	// TODO : check if ret and ret2 are both needed
 

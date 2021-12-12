@@ -233,7 +233,7 @@ U32 StaticBinaryTreeManagedMemory<memory_size, granularity>::get_tree_cells_size
     // With (cells_count / 2 + cells_count / 4 + ... + cells_count / 2^max_layer) = 2^(max_layer+1) - 1 - cells_count
     constexpr U32 base_cell_size = sizeof(TreeCell<1>);
     constexpr U32 derived_cell_size = sizeof(TreeCell<2>);
-    constexpr U32 derived_cells_count = (cells_count << 1) - 1 - cells_count;
+    U32 derived_cells_count = (cells_count << 1) - 1 - cells_count;
     return base_cell_size * cells_count + derived_cells_count * derived_cell_size;
 }
 

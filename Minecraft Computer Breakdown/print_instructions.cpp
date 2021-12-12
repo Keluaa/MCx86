@@ -64,13 +64,38 @@ std::string register_to_str(Register reg)
 void print_operand(const Inst& inst, const Inst::Operand& op)
 {
 	std::cout << optype_to_str(op.type) << " ";
-	switch (op.type) {
-	case OpType::REG: 
-		std::cout << register_to_str(op.reg) << " "; 
-		break;
-	default:
-		break;
-	}
+    switch (op.type)
+    {
+    case OpType::REG:
+        std::cout << register_to_str(op.reg) << " ";
+        break;
+
+    case OpType::MEM:
+    {
+        bool first = true;
+        std::cout << "[";
+        if (inst.base_reg_present) {
+            first = false;
+            std::cout << register_to_str(static_cast<Register>(static_cast<U8>(op.reg) & 0b111));
+        }
+        if (inst.scaled_reg_present) {
+            if (!first) std::cout << "+";
+            first = false;
+            std::cout << register_to_str(static_cast<Register>(inst.scaled_reg))
+                      << "*"
+                      << (1 << ((static_cast<U8>(op.reg) & 0b11000) >> 3));
+        }
+        if (inst.address_value != 0) {
+            if (!first) std::cout << "+";
+            std::cout << "disp";
+        }
+        std::cout << "] ";
+        break;
+    }
+
+    default:
+        break;
+    }
 	if (op.read) {
 		std::cout << "R ";
 	}
@@ -80,8 +105,13 @@ void print_operand(const Inst& inst, const Inst::Operand& op)
 }
 
 
-void print_instruction(const Inst& inst)
+void print_instruction(U32 inst_address, const Inst& inst)
 {
+    std::cout << "0x"
+              << std::hex << std::setfill('0') << std::setw(5) << inst_address
+              << std::dec << std::setfill(' ')
+              << "  ";
+
 	std::string opcode;
 
 	auto it = Opcodes::mnemonics.find(inst.opcode);
@@ -124,11 +154,11 @@ void print_instruction(const Inst& inst)
 	}
 
 	if (inst.address_value != 0) {
-		std::cout << "ADDR 0x" << std::hex << inst.address_value << " ";
+		std::cout << "ADDR 0x" << std::hex << inst.address_value << " " << std::dec;
 	}
 		
 	if (inst.immediate_value != 0) {
-		std::cout << "IMM 0x" << std::hex << inst.immediate_value << " ";
+		std::cout << "IMM 0x" << std::hex << inst.immediate_value << " " << std::dec;
 	}
 
 	std::cout << "\n";
@@ -138,10 +168,7 @@ void print_instruction(const Inst& inst)
 void print_instructions(const std::vector<Inst>* insts, int start, size_t count, size_t address)
 {
 	for (int i = start; i < start + count; i++) {
-        std::cout << "0x"
-                  << std::hex << std::setfill('0') << std::setw(5) << address++
-                  << std::dec << std::setfill(' ')
-                  << "  ";
-		print_instruction((*insts)[i]);
-	}
+		print_instruction(address, (*insts)[i]);
+        address++;
+    }
 }

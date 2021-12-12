@@ -23,9 +23,9 @@ class CPU
 
     Mem::Buffer<128, U8> io = Mem::Buffer<128, U8>(new U8[128]{});
 
-	Interrupts::InterruptDescriptorTable<64>* interruptsTable = nullptr; // TODO
+	Interrupts::InterruptDescriptorTable<64>* interrupts_table = nullptr; // TODO
 
-	const Inst* currentInstruction = nullptr;
+	const Inst* current_instruction = nullptr;
 
 	U32 clock_cycle_count = 0;
     bit halted = false;
@@ -34,23 +34,23 @@ class CPU
 	
 	[[nodiscard]] static constexpr OpSize get_size(bit size_override, bit byte_size_override);
 	
-	void execute_arithmetic_instruction(U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2);
-	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret2);
+	void execute_arithmetic_instruction(U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret_2);
+	void execute_non_arithmetic_instruction(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret_2);
 	void execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, EFLAGS& flags);
 	
-	[[nodiscard]] U32 compute_address() const;
+	[[nodiscard]] U32 compute_address(U8 register_field) const;
 	
 	void push(U32 value, OpSize size = OpSize::UNKNOWN);
 	U32 pop(OpSize size = OpSize::UNKNOWN);
 
 	void interrupt(Interrupts::Interrupt interrupt);
 
-	void update_adjust_flag(EFLAGS& flags, U32 op1, U32 op2);
-	void update_status_flags(EFLAGS& flags, U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize, bit carry = 0);
+	void update_adjust_flag(EFLAGS& flags, U32 op_1, U32 op_2);
+	void update_status_flags(EFLAGS& flags, U32 op_1, U32 op_2, U32 result, OpSize op_1_size, OpSize op_2_size, OpSize ret_size, bit carry = 0);
 
     void throw_NYI(const char* msg) const
     {
-        throw NotImplemented(currentInstruction->opcode, registers.EIP, msg);
+        throw NotImplemented(current_instruction->opcode, registers.EIP, msg);
     }
 
     void throw_exception(const Interrupts::Interrupt& interrupt) const

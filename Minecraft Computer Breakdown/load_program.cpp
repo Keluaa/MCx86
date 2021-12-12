@@ -90,6 +90,9 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 	Mem::Memory* memory = new Mem::Memory(inst_start, instructions->size() * sizeof(Inst),
                                           rom_start, rom, ram,
                                           *instructions);
-	
+
+    std::cout << "Allocated " << static_cast<double>(memory->get_RAM()->get_size()) / 1000000 << " MB of RAM"
+              << ", with a " << static_cast<double>(memory->get_RAM()->get_memory_manager().get_tree_cells_size()) / 1000000 << " MB allocator tree.\n";
+
 	return memory;
 }

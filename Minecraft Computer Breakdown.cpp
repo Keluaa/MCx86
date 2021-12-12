@@ -128,7 +128,7 @@ int main()
     try {
         CPU cpu(memory);
         cpu.startup();
-        cpu.run(1000);
+        cpu.run(13);
     }
     catch (const std::exception& e) {
         std::cout << "Program failed.\n";

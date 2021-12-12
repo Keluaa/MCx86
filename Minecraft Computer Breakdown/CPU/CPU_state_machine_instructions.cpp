@@ -1,6 +1,4 @@
 ﻿
-#include <iostream>
-
 #include "../ALU.hpp"
 #include "CPU.h"
 #include "opcodes.h"
@@ -61,13 +59,11 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	{
 		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.");
 
+        // Near call, relative or absolute, based on the displacement.
+        // The target address is pre-computed by the transassembler, so there is no distinction between relative or absolute call.
 		U32 eip = registers.read_EIP();
 		push(eip, OpSize::DW);
-		eip = ALU::add_no_carry(eip, data.op1);
-		if (data.op1_size == OpSize::W) {
-			eip &= 0xFFFF; // keep only the first 2 bytes
-		}
-		registers.write_EIP(eip);
+		registers.write_EIP(data.address);
 		break;
 	}
 	case Opcodes::INT:
@@ -76,8 +72,9 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	case Opcodes::LEAVE:
 	case Opcodes::LOOP:
 	case Opcodes::REP:
-	case Opcodes::RET:
-	    break; // TODO : all instructions above
+    case Opcodes::RET:
+        throw_NYI("INT, IRET, JMP, LEAVE, LOOP, REP, RET are not yet implemented");
+        break; // TODO : all instructions above
 
 	case Opcodes::ENTER:
 	{
@@ -234,11 +231,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		}
 
 		if (jump) {
-			U32 new_eip = ALU::add_no_carry(registers.read_EIP(), data.op1);
-			if (data.op_size == OpSize::W) {
-				new_eip = U16(new_eip);
-			}
-			registers.write_EIP(new_eip);
+            registers.write_EIP(data.op1);
 		}
 
 		break;
