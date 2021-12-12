@@ -161,7 +161,7 @@ void print_instruction(U32 inst_address, const Inst& inst)
 		std::cout << "IMM 0x" << std::hex << inst.immediate_value << " " << std::dec;
 	}
 
-	std::cout << "\n";
+	std::cout << std::endl;
 }
 
 

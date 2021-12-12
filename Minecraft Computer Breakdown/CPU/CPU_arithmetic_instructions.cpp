@@ -251,7 +251,6 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	{
 		bit carry;
 		U32 val = ALU::sub(data.op1, data.op2, carry);
-
 		update_status_flags(flags, data.op1, data.op2, val, data.op1_size, data.op2_size, data.op1_size, carry);
 		break;
 	}

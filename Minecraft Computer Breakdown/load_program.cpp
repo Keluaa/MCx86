@@ -92,7 +92,9 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
                                           *instructions);
 
     std::cout << "Allocated " << static_cast<double>(memory->get_RAM()->get_size()) / 1000000 << " MB of RAM"
-              << ", with a " << static_cast<double>(memory->get_RAM()->get_memory_manager().get_tree_cells_size()) / 1000000 << " MB allocator tree.\n";
+              << ", with a "
+              << static_cast<double>(Mem::StaticBinaryTreeManagedMemory<Mem::RAM_SIZE, sizeof(U32)>::get_tree_cells_size()) / 1000000
+              << " MB allocator tree.\n";
 
 	return memory;
 }

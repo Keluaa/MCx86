@@ -9,7 +9,7 @@
  * @param data Holds instruction information
  * @param flags EFLAGS register
  */
-void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, EFLAGS& flags)
+void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode, const InstData data, EFLAGS& flags, U32& ret)
 {
 	// All parameters are stored on pseudo registers which are read
 	// each loop. Their values cannot change during execution.
@@ -57,8 +57,6 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	{
 	case Opcodes::CALL:
 	{
-		WARNING("The CALL instruction has an incomplete implementation, only near calls are implemented.");
-
         // Near call, relative or absolute, based on the displacement.
         // The target address is pre-computed by the transassembler, so there is no distinction between relative or absolute call.
 		U32 eip = registers.read_EIP();
@@ -72,10 +70,20 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	case Opcodes::LEAVE:
 	case Opcodes::LOOP:
 	case Opcodes::REP:
-    case Opcodes::RET:
-        throw_NYI("INT, IRET, JMP, LEAVE, LOOP, REP, RET are not yet implemented");
+        throw_NYI("INT, IRET, JMP, LEAVE, LOOP, REP are not yet implemented");
         break; // TODO : all instructions above
 
+    case Opcodes::RET:
+    {
+        // Near RET only
+        U32 eip = pop(OpSize::DW);
+        registers.write_EIP(eip);
+        if (ALU::check_different_than_zero(data.op1)) {
+            // RET with additional popping
+            ret = ALU::add_no_carry(data.op1, data.op1);
+        }
+        break;
+    }
 	case Opcodes::ENTER:
 	{
 		switch(state)

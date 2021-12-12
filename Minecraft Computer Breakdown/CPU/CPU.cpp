@@ -28,7 +28,8 @@ void CPU::startup()
     registers.set_CR0(control_register);
 
     // Setup registers
-    registers.write(Register::ESP, memory->stack_end);
+    //registers.write(Register::ESP, memory->stack_end);
+    registers.write(Register::ESP, 0x4FD630); // Set to this value so that it matches the ESP value (to the first 5 hexdigits) of an actual execution of the program
     registers.write_EIP(memory->text_pos);
 }
 
@@ -220,7 +221,7 @@ void CPU::execute_instruction()
 
 		if (inst.opcode & Opcodes::state_machine) {
 			// Include all state machine, jump and string instructions
-			execute_non_arithmetic_instruction_with_state_machine(inst.opcode, data, flags);
+			execute_non_arithmetic_instruction_with_state_machine(inst.opcode, data, flags, return_value);
 		}
 		else {
 			execute_non_arithmetic_instruction(inst.opcode, data, flags, return_value, return_value_2);
@@ -335,6 +336,8 @@ void CPU::push(U32 value, OpSize size)
 	
 	registers.write(Register::ESP, esp);
 
+    std::cout << "Pushed 0x" << std::hex << value << " at 0x" << esp << std::dec << std::endl;
+
     memory->write(esp, value, size);
 }
 
@@ -353,6 +356,8 @@ U32 CPU::pop(OpSize size)
 	}
 
     U32 val = memory->read(esp, size);
+
+    std::cout << "Popped 0x" << std::hex << val << " at 0x" << esp << std::dec << std::endl;
 
 	switch (size)
 	{

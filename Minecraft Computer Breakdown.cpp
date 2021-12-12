@@ -59,19 +59,19 @@ static const char instructions_filename[] = "../executable_file_data/instruction
 /**
  * Basic signal handling to set the exit code as the signal code.
  */
-volatile std::sig_atomic_t gSignalStatus;
+volatile std::sig_atomic_t g_signal_status;
 void signal_handler(int sig)
 {
-	gSignalStatus = sig;
+    g_signal_status = sig;
     std::quick_exit(sig);
 }
 
 
 void quick_exit_handler()
 {
-	if (gSignalStatus != 0) {
+	if (g_signal_status != 0) {
 		std::cerr << "Signal: ";
-		switch (gSignalStatus)
+		switch (g_signal_status)
 		{
 		case SIGSEGV: std::cerr << "SIGSEGV"; break;
 		case SIGABRT: std::cerr << "SIGABRT"; break;
