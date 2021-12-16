@@ -67,6 +67,14 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 
 	memory_map_file.close();
 
+    if (rom_start + Mem::ROM_SIZE != ram_start) {
+        std::cout << "The RAM should start where the ROM ends. "
+                  << "ROM start: 0x" << std::hex << rom_start
+                  << ", ROM end: 0x" << rom_start + Mem::ROM_SIZE
+                  << ", RAM start: 0x" << ram_start << "\n";
+        return nullptr;
+    }
+
 	std::filebuf memory_file;
 	if (!memory_file.open(memory_contents_filename, std::ios::in | std::ios::binary)) {
 		std::cout << "Could not open the memory contents file '" << memory_contents_filename << "'\n";

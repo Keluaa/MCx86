@@ -60,6 +60,7 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
         // Near call, relative or absolute, based on the displacement.
         // The target address is pre-computed by the transassembler, so there is no distinction between relative or absolute call.
 		U32 eip = registers.read_EIP();
+        eip = ALU::add_no_carry(eip, 1);
 		push(eip, OpSize::DW);
 		registers.write_EIP(data.address);
 		break;

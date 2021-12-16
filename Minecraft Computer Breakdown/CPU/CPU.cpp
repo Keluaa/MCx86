@@ -209,7 +209,7 @@ void CPU::execute_instruction()
 	// Get the flags registers if needed
 	EFLAGS flags;
 	if (inst.get_flags) {
-	    flags.value = registers.EFLAGS;
+	    flags = registers.flags;
 	}
 	
 	// Execute the instruction
@@ -233,7 +233,7 @@ void CPU::execute_instruction()
 	
 	if (inst.get_flags) {
 		// write the new flags
-		registers.EFLAGS = flags.value;
+		registers.flags.value = flags.value;
 	}
 
 	// Write the output of the instruction to its destination

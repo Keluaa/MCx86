@@ -166,7 +166,45 @@ void Registers::complete_reset()
 	reset_control_registers();
 
 	EIP = 0;
-	EFLAGS = 0b10;
+    flags.reset();
 	IDT_base = 0;
 	IDT_limit = 0;
+}
+
+
+std::string EFLAGS::print() const
+{
+    static const std::map<U32, const char*> flags_map{
+        { CF, "CF" },
+        { PF, "PF" },
+        { AF, "AF" },
+        { ZF, "ZF" },
+        { SF, "SF" },
+        { TF, "TF" },
+        { IF, "IF" },
+        { DF, "DF" },
+        { OF, "OF" },
+        { IOPL, "IOPL" },
+        { IOPL_L, "IOPL_L" },
+        { IOPL_H, "IOPL_H" },
+        { NT, "NT" },
+        { RF, "RF" },
+        { VM, "VM" },
+        { AC, "AC" },
+        { VIF, "VIF" },
+        { VIP, "VIP" },
+        { ID, "ID" },
+    };
+
+    std::string str("[");
+
+    for (const auto& [ flag, flag_str ] : flags_map ) {
+        if (value & flag) {
+            str += " ";
+            str += flag_str;
+        }
+    }
+
+    str += " ]";
+    return str;
 }

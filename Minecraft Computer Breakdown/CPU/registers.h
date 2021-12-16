@@ -106,7 +106,7 @@ struct Registers
 	/**
 	 * Status Flags
 	 */
-	U32 EFLAGS = 0b10; // bit 1 is always 1
+	EFLAGS flags; // Default value: bit 1 is always 1
 
 
 	/**

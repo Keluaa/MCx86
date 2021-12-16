@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <map>
+
 #include "../data_types.h"
 #include "../ALU.hpp"
 
@@ -101,6 +104,8 @@ public:
     }
 
     [[nodiscard]] constexpr U8 read_IOPL() const { return (value & (EFLAGS::IOPL)) >> 12; }
+
+    [[nodiscard]] std::string print() const;
 };
 
 
