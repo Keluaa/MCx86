@@ -15,14 +15,10 @@ public:
 
     virtual void reset() { }
 
-    [[nodiscard]] constexpr bit get(Value_t flag) const
-    { return bool(value & Value_t(flag)); }
+    [[nodiscard]] constexpr bit get(Value_t flag) const { return bool(value & Value_t(flag)); }
 
-    constexpr void set(Value_t flag)
-    { value |= Value_t(flag); }
-
-    constexpr void clear(Value_t flag)
-    { value &= ~Value_t(flag); }
+    constexpr void set(Value_t flag)   { value |=  Value_t(flag); }
+    constexpr void clear(Value_t flag) { value &= ~Value_t(flag); }
 
     constexpr void set_val(Value_t flag, bit val)
     {
@@ -63,18 +59,25 @@ public:
 
     explicit EFLAGS(U32 value = default_value) : FlagsInterface(value) { }
 
-    void reset() override
-    { value = default_value; }
+    void reset() override { value = default_value; }
+
+    [[nodiscard]] constexpr U8 read_IOPL() const { return (value & (EFLAGS::IOPL)) >> 12; }
+
+    [[nodiscard]] std::string print() const;
 
     /*
      * The following methods implements the most used logic for updating a flag after an instruction.
      */
 
     constexpr void update_sign_flag(U32 result, OpSize size)
-    { set_val(EFLAGS::SF, ALU::check_is_negative(result, size)); }
+    {
+        set_val(EFLAGS::SF, ALU::check_is_negative(result, size));
+    }
 
     constexpr void update_zero_flag(U32 result)
-    { set_val(EFLAGS::ZF, ALU::check_equal_zero(result)); }
+    {
+        set_val(EFLAGS::ZF, ALU::check_equal_zero(result));
+    }
 
     constexpr void update_parity_flag(U32 result)
     {
@@ -82,7 +85,20 @@ public:
         set_val(EFLAGS::PF, ALU::check_parity(U8(result & 0xFF)));
     }
 
-    constexpr void update_overflow_flag(U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize)
+    constexpr void update_carry_flag(U32 op_1, U32 op_2, bit carry, bit is_sub = 0)
+    {
+        if (is_sub) {
+            if (!ALU::compare_greater_or_equal(op_1, op_2)) {
+                set_val(EFLAGS::CF, true);
+            }
+        }
+        else {
+            set_val(EFLAGS::CF, carry);
+        }
+    }
+
+    constexpr void update_overflow_flag(U32 op1, U32 op2, U32 result, OpSize op1Size, OpSize op2Size, OpSize retSize,
+                                        bit is_sub = 0)
     {
         /*
         overflow flag truth table (1: op1, 2: op2, R: result):
@@ -94,18 +110,45 @@ public:
         - - - 0
         - - + 1
 
-        => (sign(op1) & sign(op2)) ^ sign(R)
+        => (sign(1) == sign(2)) & (R != sign(1))
+        => !(sign(1) ^ sign(2)) & (R ^ sign(1))
         */
         bit is_op1_neg = ALU::check_is_negative(op1, op1Size);
         bit is_op2_neg = ALU::check_is_negative(op2, op2Size);
         bit is_ret_neg = ALU::check_is_negative(result, retSize);
-        bit val = (is_op1_neg & is_op2_neg) ^ is_ret_neg;
+
+        if (is_sub) {
+            is_op2_neg = !is_op2_neg;
+        }
+
+        bit val = !(is_op1_neg ^ is_op2_neg) & (is_ret_neg ^ is_op1_neg);
         set_val(EFLAGS::OF, val);
     }
 
-    [[nodiscard]] constexpr U8 read_IOPL() const { return (value & (EFLAGS::IOPL)) >> 12; }
+    constexpr void update_adjust_flag(U32 op_1, U32 op_2, bit is_sub = 0)
+    {
+        // Adjust flag is set only if there were a carry from the first 4 bits of the AL register to the 4 other bits.
+        U8 low_res_bits;
+        if (is_sub) {
+            low_res_bits = ALU::sub_no_carry(op_1 & 0x0F, op_2 & 0x0F);
+        } else {
+            low_res_bits = ALU::add_no_carry(op_1 & 0x0F, op_2 & 0x0F);
+        }
+        bit val = ALU::compare_greater(low_res_bits, U8(0x0F));
+        set_val(EFLAGS::AF, val);
+    }
 
-    [[nodiscard]] std::string print() const;
+    constexpr void update_status_flags(U32 op_1, U32 op_2, U32 result,
+                                       OpSize op_1_size, OpSize op_2_size, OpSize ret_size,
+                                       bit carry, bit is_sub = 0)
+    {
+        update_overflow_flag(op_1, op_2, result, op_1_size, op_2_size, ret_size, is_sub);
+        update_sign_flag(result, ret_size);
+        update_zero_flag(result);
+        update_parity_flag(result);
+        update_carry_flag(op_1, op_2, carry, is_sub);
+        update_adjust_flag(op_1, op_2, is_sub);
+    }
 };
 
 
@@ -122,6 +165,5 @@ public:
 
     explicit CR0(U32 value = 0) : FlagsInterface<U32>(value) { }
 
-    void reset() override
-    { value = 0; }
+    void reset() override { value = 0; }
 };

@@ -112,8 +112,6 @@ struct Inst
 	U32 address_value; // Holds an address displacement value or an immediate constant address
 	U32 immediate_value;
 
-    Inst() = default;
-
     // The Operand struct by itself cannot describe when it is not used, here is how to do it for both operands:
     [[nodiscard]] constexpr bool is_op1_none() const { return !op1.read && !write_ret1_to_op1 && op1.type == OpType::REG; }
     [[nodiscard]] constexpr bool is_op2_none() const { return !op2.read && !write_ret2_to_op2 && op2.type == OpType::REG; }

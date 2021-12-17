@@ -6,6 +6,7 @@
 
 /**
  * Executes the instruction specified by its opcode. This method handles all 'simple' instructions.
+ *
  * @param data Holds instruction information
  * @param flags EFLAGS register
  * @param ret Return value of the instruction
@@ -89,7 +90,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	    bit carry = flags.get(EFLAGS::CF);
 		ret = ALU::add(data.op1, data.op2, carry);
 
-		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+        flags.update_status_flags(data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
 		break;
 	}
 	case Opcodes::ADD:
@@ -97,7 +98,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 		bit carry = 0;
 		ret = ALU::add(data.op1, data.op2, carry);
 
-		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+        flags.update_status_flags(data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
 		break;
 	}
 	case Opcodes::AND:
@@ -196,7 +197,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	case Opcodes::BTS:
 	{
 		if (data.op2 > 32) {
-			WARNING("The BTS instruction has an incomplete implementation for memory operands.");
+            throw_NYI("The BTS instruction has an incomplete implementation for memory operands.");
 		}
 
 		ret = data.op1;
@@ -251,7 +252,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	{
 		bit carry;
 		U32 val = ALU::sub(data.op1, data.op2, carry);
-		update_status_flags(flags, data.op1, data.op2, val, data.op1_size, data.op2_size, data.op1_size, carry);
+        flags.update_status_flags(data.op1, data.op2, val, data.op1_size, data.op2_size, data.op1_size, carry, 1);
 		break;
 	}
 	case Opcodes::CWD:
@@ -328,12 +329,11 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	{
 		ret = ALU::sub_no_carry(data.op1, U8(1));
 
-		flags.update_overflow_flag(data.op1, U8(-1), ret, data.op1_size, OpSize::B, data.op1_size);
+        flags.update_overflow_flag(data.op1, U8(-1), ret, data.op1_size, OpSize::B, data.op1_size);
 		flags.update_parity_flag(ret);
 		flags.update_sign_flag(ret, data.op1_size);
 		flags.update_zero_flag(ret);
-
-        update_adjust_flag(flags, data.op1, -1);
+        flags.update_adjust_flag(data.op1, -1, 1);
 		break;
 	}
 	case Opcodes::DIV:
@@ -395,12 +395,11 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	{
 		ret = ALU::add_no_carry(data.op1, 1);
 
-		flags.update_overflow_flag(data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size);
+        flags.update_overflow_flag(data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size);
 		flags.update_sign_flag(ret, data.op1_size);
 		flags.update_zero_flag(ret);
         flags.update_parity_flag(ret);
-
-        update_adjust_flag(flags, data.op1, data.op2);
+        flags.update_adjust_flag(data.op1, data.op2);
 		break;
 	}
 	case Opcodes::LAHF:
@@ -622,7 +621,7 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
         op_2 = ALU::add(op_2, 0, carry);
 		ret = ALU::sub(data.op1, op_2, carry);
 
-		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+        flags.update_status_flags(data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry, 1);
 		break;
 	}
 	case Opcodes::SETcc:
@@ -630,86 +629,22 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 		U8 condition = data.imm;
 		switch (condition)
 		{
-		case 0b0000: // Above | Not below or equal
-			// ZF = 0 && CF = 0
-			ret = !flags.get(EFLAGS::ZF | EFLAGS::CF);
-			break;
-
-		case 0b0001: // Above or equal | Not below | Not carry
-			// CF = 0
-			ret = !flags.get(EFLAGS::CF);
-			break;
-
-		case 0b0010: // Below | Carry | Not above or equal
-			// CF = 1
-            ret = flags.get(EFLAGS::CF);
-			break;
-
-		case 0b0011: // Below or equal | Not above
-			// ZF = 1 || CF = 1
-            ret = flags.get(EFLAGS::ZF | EFLAGS::CF);
-			break;
-
-		case 0b0100: // Equal | Zero
-			// ZF = 1
-            ret = flags.get(EFLAGS::ZF);
-			break;
-
-		case 0b0101: // Greater | Not less or equal
-			// ZF = 0 || (SF == OF)
-			ret = !flags.get(EFLAGS::ZF) || !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF));
-			break;
-
-		case 0b0110: // Greater or Equal | Not less
-			// SF == OF
-            ret = !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF));
-			break;
-
-		case 0b0111: // Less | Not greater or equal
-			// SF != OF
-            ret = flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF);
-			break;
-
-		case 0b1000: // Less or equal | Not greater
-			// ZF = 1 && SF != OF
-            ret = flags.get(EFLAGS::ZF) & (flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF));
-			break;
-
-		case 0b1001: // Not equal | Not zero
-			// ZF = 0
-            ret = !flags.get(EFLAGS::ZF);
-			break;
-
-		case 0b1010: // Not overflow
-			// OF = 0
-            ret = !flags.get(EFLAGS::OF);
-			break;
-
-		case 0b1011: // Not parity | Parity odd
-			// PF = 0
-            ret = !flags.get(EFLAGS::PF);
-			break;
-
-		case 0b1100: // Not sign
-			// SF = 0
-            ret = !flags.get(EFLAGS::SF);
-			break;
-
-		case 0b1101: // Overflow
-			// OF = 1
-            ret = flags.get(EFLAGS::OF);
-			break;
-
-		case 0b1110: // Parity | Parity even
-			// PF = 1
-            ret = flags.get(EFLAGS::PF);
-			break;
-
-		case 0b1111: // Sign
-			// SF = 1
-            ret = flags.get(EFLAGS::SF);
-			break;
-
+        case 0b0000: ret =  flags.get(EFLAGS::OF); break;              // Overflow                   OF = 1
+        case 0b0001: ret = !flags.get(EFLAGS::OF); break;              // Not overflow               OF = 0
+        case 0b0010: ret =  flags.get(EFLAGS::CF); break;              // Below | Carry | Not above or equal     CF = 1
+        case 0b0011: ret = !flags.get(EFLAGS::CF); break;              // Above or equal | Not below | Not carry CF = 0
+        case 0b0100: ret =  flags.get(EFLAGS::ZF); break;              // Equal | Zero               ZF = 1
+        case 0b0101: ret = !flags.get(EFLAGS::ZF); break;              // Not equal | Not zero       ZF = 0
+        case 0b0110: ret =  flags.get(EFLAGS::ZF | EFLAGS::CF); break; // Below or equal | Not above ZF = 1 || CF = 1
+		case 0b0111: ret = !flags.get(EFLAGS::ZF | EFLAGS::CF); break; // Above | Not below or equal ZF = 0 && CF = 0
+        case 0b1000: ret =  flags.get(EFLAGS::SF); break;              // Sign                       SF = 1
+        case 0b1001: ret = !flags.get(EFLAGS::SF); break;              // Not sign                   SF = 0
+        case 0b1010: ret =  flags.get(EFLAGS::PF); break;              // Parity | Parity even       PF = 1
+        case 0b1011: ret = !flags.get(EFLAGS::PF); break;              // Not parity | Parity odd    PF = 0
+        case 0b1100: ret =   flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF);  break; // Less | Not greater or equal SF != OF
+        case 0b1101: ret = !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF)); break; // Greater or Equal | Not less SF == OF
+        case 0b1110: ret =   flags.get(EFLAGS::ZF) |  (flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF)); break; // Less or equal | Not greater ZF = 1 ||  SF != OF
+        case 0b1111: ret =  !flags.get(EFLAGS::ZF) & !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF)); break; // Greater | Not less or equal ZF = 0 && (SF == OF)
         default:
             throw BadInstruction("Invalid Jump Type", registers.EIP);
 		}
@@ -773,12 +708,20 @@ void CPU::execute_arithmetic_instruction(const U8 opcode, const InstData data, E
 	}
 	case Opcodes::SUB:
 	{
-		U32 op_2 = ALU::sign_extend(data.op2, data.op2_size);
+        OpSize op_2_size = data.op2_size;
+        U32 op_2;
+        if (data.op1_size != op_2_size) {
+            op_2 = ALU::sign_extend(data.op2, op_2_size);
+            op_2_size = data.op1_size;
+        }
+        else {
+            op_2 = data.op2;
+        }
 
 		bit carry = 0;
 		ret = ALU::sub(data.op1, op_2, carry);
 
-		update_status_flags(flags, data.op1, data.op2, ret, data.op1_size, data.op2_size, data.op1_size, carry);
+        flags.update_status_flags(data.op1, op_2, ret, data.op1_size, op_2_size, data.op1_size, carry, 1);
 		break;
 	}
 	case Opcodes::TEST:

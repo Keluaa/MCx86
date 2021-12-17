@@ -45,9 +45,6 @@ class CPU
 
 	void interrupt(Interrupts::Interrupt interrupt);
 
-	void update_adjust_flag(EFLAGS& flags, U32 op_1, U32 op_2);
-	void update_status_flags(EFLAGS& flags, U32 op_1, U32 op_2, U32 result, OpSize op_1_size, OpSize op_2_size, OpSize ret_size, bit carry = 0);
-
     void throw_NYI(const char* msg) const
     {
         throw NotImplemented(current_instruction->opcode, registers.EIP, msg);
@@ -69,6 +66,9 @@ public:
 	void startup();
 	void run(size_t max_cycles = std::numeric_limits<size_t>::max());
 	void execute_instruction();
+
+	Registers& get_registers() { return registers; }
+	Mem::Memory& get_memory() { return *memory; }
 
     U32 read_io(U8 io_address, OpSize size);
     void write_io(U8 io_address, U32 value, OpSize size);

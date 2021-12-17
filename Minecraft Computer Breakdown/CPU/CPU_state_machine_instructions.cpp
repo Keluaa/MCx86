@@ -5,7 +5,9 @@
 
 
 /**
- * @brief Handles more complex instructions, which may require several clock cycles to execute, or modifies the instruction pointer explicitly.
+ * Handles more complex instructions, which may require several clock cycles to execute, or modifies the instruction
+ * pointer explicitly.
+ *
  * @param data Holds instruction information
  * @param flags EFLAGS register
  */
@@ -145,104 +147,30 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		bit jump = 0;
 		switch (condition)
 		{
-		case 0b00000: // Above | Not below or equal
-			// ZF = 0 && CF = 0
-			jump = !flags.get(EFLAGS::ZF | EFLAGS::CF);
-			break;
-
-		case 0b00001: // Above or equal | Not below | Not carry
-			// CF = 0
-            jump = !flags.get(EFLAGS::CF);
-			break;
-
-		case 0b00010: // Below | Carry | Not above or equal
-			// CF = 1
-            jump = flags.get(EFLAGS::CF);
-			break;
-
-		case 0b00011: // Below or equal | Not above
-			// ZF = 1 || CF = 1
-			jump = flags.get(EFLAGS::ZF | EFLAGS::CF);
-			break;
-
-		case 0b00100: // Equal | Zero
-			// ZF = 1
-            jump = flags.get(EFLAGS::ZF);
-			break;
-
-		case 0b00101: // Greater | Not less or equal
-			// ZF = 0 || (SF == OF)
-			jump = !flags.get(EFLAGS::ZF) || !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF));
-			break;
-
-		case 0b00110: // Greater or Equal | Not less
-			// SF == OF
-            jump = !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF));
-			break;
-
-		case 0b00111: // Less | Not greater or equal
-			// SF != OF
-            jump = flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF);
-			break;
-
-		case 0b01000: // Less or equal | Not greater
-			// ZF = 1 && SF != OF
-            jump = flags.get(EFLAGS::ZF) && (flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF));
-			break;
-
-		case 0b01001: // Not equal | Not zero
-			// ZF = 0
-			jump = !flags.get(EFLAGS::ZF);
-			break;
-
-		case 0b01010: // Not overflow
-			// OF = 0
-			jump = !flags.get(EFLAGS::OF);
-			break;
-
-		case 0b01011: // Not parity | Parity odd
-			// PF = 0
-			jump = !flags.get(EFLAGS::PF);
-			break;
-
-		case 0b01100: // Not sign
-			// SF = 0
-			jump = !flags.get(EFLAGS::SF);
-			break;
-
-		case 0b01101: // Overflow
-			// OF = 1
-			jump = flags.get(EFLAGS::OF);
-			break;
-
-		case 0b01110: // Parity | Parity even
-			// PF = 1
-			jump = flags.get(EFLAGS::PF);
-			break;
-
-		case 0b01111: // Sign
-			// SF = 1
-			jump = flags.get(EFLAGS::SF);
-			break;
-
-		case 0b10000: // CX register is zero
-			// CX = 0
-			jump = ALU::check_equal_zero(U16(registers.read(Register::CX)));
-			break;
-
-		case 0b10001: // ECX register is zero
-			// ECX = 0
-			jump = ALU::check_equal_zero(registers.read(Register::ECX));
-			break;
-
+        case 0b00000: jump =  flags.get(EFLAGS::OF); break;              // Overflow                   OF = 1
+        case 0b00001: jump = !flags.get(EFLAGS::OF); break;              // Not overflow               OF = 0
+        case 0b00010: jump =  flags.get(EFLAGS::CF); break;              // Below | Carry | Not above or equal     CF = 1
+        case 0b00011: jump = !flags.get(EFLAGS::CF); break;              // Above or equal | Not below | Not carry CF = 0
+        case 0b00100: jump =  flags.get(EFLAGS::ZF); break;              // Equal | Zero               ZF = 1
+        case 0b00101: jump = !flags.get(EFLAGS::ZF); break;              // Not equal | Not zero       ZF = 0
+        case 0b00110: jump =  flags.get(EFLAGS::ZF | EFLAGS::CF); break; // Below or equal | Not above ZF = 1 || CF = 1
+		case 0b00111: jump = !flags.get(EFLAGS::ZF | EFLAGS::CF); break; // Above | Not below or equal ZF = 0 && CF = 0
+        case 0b01000: jump =  flags.get(EFLAGS::SF); break;              // Sign                       SF = 1
+        case 0b01001: jump = !flags.get(EFLAGS::SF); break;              // Not sign                   SF = 0
+        case 0b01010: jump =  flags.get(EFLAGS::PF); break;              // Parity | Parity even       PF = 1
+        case 0b01011: jump = !flags.get(EFLAGS::PF); break;              // Not parity | Parity odd    PF = 0
+        case 0b01100: jump =   flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF);  break; // Less | Not greater or equal SF != OF
+        case 0b01101: jump = !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF)); break; // Greater or Equal | Not less SF == OF
+        case 0b01110: jump =   flags.get(EFLAGS::ZF) |  (flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF)); break; // Less or equal | Not greater ZF = 1 ||  SF != OF
+		case 0b01111: jump =  !flags.get(EFLAGS::ZF) & !(flags.get(EFLAGS::SF) ^ flags.get(EFLAGS::OF)); break; // Greater | Not less or equal ZF = 0 && (SF == OF)
+		case 0b10000: jump = ALU::check_equal_zero(U16(registers.read(Register::CX))); break; // CX register is zero CX = 0
+		case 0b10001: jump = ALU::check_equal_zero(registers.read(Register::ECX));     break; // ECX register is zero ECX = 0
         default:
             throw BadInstruction("Invalid Jump Type", registers.EIP);
 		}
-
 		if (jump) {
             registers.write_EIP(data.op1);
 		}
-
 		break;
 	}
 	case Opcodes::POPA:

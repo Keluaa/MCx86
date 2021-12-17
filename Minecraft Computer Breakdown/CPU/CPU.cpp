@@ -14,7 +14,7 @@ CPU::CPU(Mem::Memory* memory)
 
 void CPU::startup()
 {
-    // TODO: see the startup process in the manual instead
+    registers.complete_reset();
 
     clock_cycle_count = 0;
     halted = false;
@@ -424,43 +424,6 @@ void CPU::interrupt(Interrupts::Interrupt interrupt)
 			new_clock_cycle();
 		}
 	} while (repeat);
-}
-
-
-/**
- * Utility function used to update the value of the adjust flag, after a arithmetic operation using the value of the AL register.
- */
-void CPU::update_adjust_flag(EFLAGS& flags, U32 op_1, U32 op_2)
-{
-	/*
-	Adjust flag is set only if there were a carry from the first 4 bits of the AL register to the 4 other bits.
-	It is 0 otherwise, including when the operation didn't use the AL register.
-	This function should only be called with instructions modifying the AL register (or AX and EAX, but not AH).
-	*/
-	if (current_instruction->op1.type == OpType::REG && current_instruction->op1_reg_index() == 0) {
-		// Not the implementation used in the circuit, which is much simpler,
-		// as this flag can come out from the adder directly.
-		bit AF = (op_1 & 0x0F) + (op_2 & 0x0F) > 0x0F; // TODO : check operation order with the manual
-		flags.set_val(EFLAGS::AF, AF);
-	}
-	else {
-	    flags.clear(EFLAGS::AF);
-	}
-}
-
-
-/**
- * Utility function used to update all arithmetic flags.
- */
-void CPU::update_status_flags(EFLAGS& flags, U32 op_1, U32 op_2, U32 result, OpSize op_1_size, OpSize op_2_size, OpSize ret_size, bit carry)
-{
-	// updates all status flags
-	flags.update_overflow_flag(op_1, op_2, result, op_1_size, op_2_size, ret_size);
-	flags.update_sign_flag(result, ret_size);
-	flags.update_zero_flag(result);
-	flags.update_parity_flag(result);
-    flags.set_val(EFLAGS::CF, carry);
-    update_adjust_flag(flags, op_1, op_2);
 }
 
 

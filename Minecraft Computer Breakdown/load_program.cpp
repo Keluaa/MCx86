@@ -95,9 +95,8 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 
 	instructions_file.close();
 	
-	Mem::Memory* memory = new Mem::Memory(inst_start, instructions->size() * sizeof(Inst),
-                                          rom_start, rom, ram,
-                                          *instructions);
+	Mem::Memory* memory = new Mem::Memory(inst_start, instructions->size() * sizeof(Inst), *instructions,
+                                          rom_start, rom, ram);
 
     std::cout << "Allocated " << static_cast<double>(memory->get_RAM()->get_size()) / 1000000 << " MB of RAM"
               << ", with a "
