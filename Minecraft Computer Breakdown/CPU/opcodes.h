@@ -61,7 +61,7 @@ namespace Opcodes
 	constexpr U8 SAHF    = 41 | arithmetic;
     constexpr U8 SHFT    = 42 | arithmetic; // heavily modified to fit in one instruction
 	constexpr U8 SBB     = 43 | arithmetic;
-	constexpr U8 SETcc   = 44 | arithmetic; // heavily modified to fit in one instruction
+	constexpr U8 SETcc   = 44 | arithmetic;
 	constexpr U8 SHD     = 45 | arithmetic; // merged SHLD and SHRD
 	constexpr U8 STC     = 46 | arithmetic;
 	constexpr U8 STD     = 47 | arithmetic;
@@ -72,7 +72,7 @@ namespace Opcodes
 	constexpr U8 XLAT    = 52 | arithmetic;
 	constexpr U8 XOR     = 53 | arithmetic;
 	
-	// Non arithmetic instructions
+	// Non-arithmetic instructions
 
 	constexpr U8 HLT     = 0 | not_arithmetic;
 	constexpr U8 IN      = 1 | not_arithmetic;
@@ -96,7 +96,7 @@ namespace Opcodes
 	constexpr U8 VERR    = 19 | not_arithmetic;
 	constexpr U8 WAIT    = 20 | not_arithmetic;
 
-	// Non arithmetic instructions on strings
+	// Non-arithmetic instructions on strings
 	
 	constexpr U8 CMPS    = 0 | not_arithmetic | str; // TODO : implement
 	constexpr U8 INS     = 1 | not_arithmetic | str; // TODO : implement
@@ -106,23 +106,23 @@ namespace Opcodes
 	constexpr U8 SCAS    = 5 | not_arithmetic | str; // TODO : implement
 	constexpr U8 STOS    = 6 | not_arithmetic | str; // TODO : implement
 	
-	// Non arithmetic instructions with jumps
+	// Non-arithmetic instructions with jumps
 	
 	constexpr U8 CALL    = 0 | not_arithmetic | jmp;
 	constexpr U8 INT     = 1 | not_arithmetic | jmp; // TODO : implement
-	constexpr U8 IRET    = 2 | not_arithmetic | jmp; // TODO : implement
-	constexpr U8 Jcc     = 3 | not_arithmetic | jmp; // heavily modified to fit in one instruction
-	constexpr U8 JMP     = 4 | not_arithmetic | jmp; // TODO : implement
-	constexpr U8 LEAVE   = 5 | not_arithmetic | jmp; // TODO : implement
-	constexpr U8 LOOP    = 6 | not_arithmetic | jmp; // TODO : implement
-	constexpr U8 REP     = 7 | not_arithmetic | jmp; // TODO : implement
-	constexpr U8 RET     = 8 | not_arithmetic | jmp; // TODO : implement
+	constexpr U8 IRET    = 2 | not_arithmetic | jmp;
+	constexpr U8 Jcc     = 3 | not_arithmetic | jmp;
+	constexpr U8 JMP     = 4 | not_arithmetic | jmp;
+	constexpr U8 LOOP    = 5 | not_arithmetic | jmp;
+	constexpr U8 REP     = 6 | not_arithmetic | jmp; // TODO : implement
+	constexpr U8 RET     = 7 | not_arithmetic | jmp;
 
 	// State Machine instructions
 
 	constexpr U8 ENTER   = 0 | not_arithmetic | state_machine;
-	constexpr U8 POPA    = 1 | not_arithmetic | state_machine;
-	constexpr U8 PUSHA   = 2 | not_arithmetic | state_machine;
+	constexpr U8 LEAVE   = 1 | not_arithmetic | state_machine;
+	constexpr U8 POPA    = 2 | not_arithmetic | state_machine;
+	constexpr U8 PUSHA   = 3 | not_arithmetic | state_machine;
 	
 	// Custom instructions
 	

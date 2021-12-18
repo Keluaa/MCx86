@@ -68,14 +68,67 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		break;
 	}
 	case Opcodes::INT:
-	case Opcodes::IRET:
+    {
+        // Assume IA-32e-MODE case (see the operation section of the manual for INT)
+        // TODO
+        throw_NYI("INT is not yet implemented");
+        break;
+    }
+    case Opcodes::IRET:
+    {
+        // Assume IA-32e-MODE case (see the operation section of the manual for IRET)
+        U32 eip = pop(data.op_size);
+        U32 cs = pop(data.op_size);
+        U32 eflags = pop(data.op_size);
+        registers.write_EIP(eip);
+        registers.write(Register::CS, cs);
+        registers.flags.value = eflags;
+        break;
+    }
 	case Opcodes::JMP:
+    {
+        // Assume near absolute jump
+        registers.write_EIP(data.op1);
+        break;
+    }
 	case Opcodes::LEAVE:
+    {
+        U32 ebp = registers.read(Register::EBP);
+        registers.write(Register::ESP, ebp);
+        ebp = pop(data.op_size);
+        registers.write(Register::EBP, ebp);
+        break;
+    }
 	case Opcodes::LOOP:
-	case Opcodes::REP:
-        throw_NYI("INT, IRET, JMP, LEAVE, LOOP, REP are not yet implemented");
-        break; // TODO : all instructions above
+    {
+        U32 count = registers.read(Register::ECX);
+        count = ALU::sub_no_carry(count, 1);
+        registers.write(Register::ECX, count);
 
+        bit dont_jump = ALU::check_equal_zero(count);
+        U8 condition = data.imm;
+        switch (condition) {
+        case 0b00: break; // LOOP
+        case 0b01: dont_jump &=  flags.get(EFLAGS::ZF); break; // LOOPE
+        case 0b10: dont_jump &= !flags.get(EFLAGS::ZF); break; // LOOPNE
+        default:
+            throw BadInstruction("Invalid Loop Type", registers.EIP);
+        }
+
+        if (!dont_jump) {
+            registers.write_EIP(data.address);
+        }
+        else {
+            registers.write_EIP(ALU::add_no_carry(registers.read_EIP(), 1));
+        }
+
+        break;
+    }
+	case Opcodes::REP:
+    {
+        throw_NYI("REP is not yet implemented");
+        break;
+    }
     case Opcodes::RET:
     {
         // Near RET only
@@ -170,7 +223,9 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 		}
 		if (jump) {
             registers.write_EIP(data.op1);
-		}
+		} else {
+            registers.write_EIP(ALU::add_no_carry(registers.EIP, 1));
+        }
 		break;
 	}
 	case Opcodes::POPA:

@@ -243,7 +243,7 @@ void CPU::execute_instruction()
 			registers.write(inst.op1.reg, return_value);
 			break;
 		case OpType::MEM:
-            memory->write(inst.address_value, return_value, data.op1_size);
+            memory->write(data.address, return_value, data.op1_size);
 			break;
 		default:
 			break;
@@ -264,7 +264,7 @@ void CPU::execute_instruction()
 			registers.write(inst.op2.reg, return_value_2);
 			break;
 		case OpType::MEM:
-            memory->write(inst.address_value, return_value_2, data.op2_size);
+            memory->write(data.address, return_value_2, data.op2_size);
 			break;
 		default:
 			break;
