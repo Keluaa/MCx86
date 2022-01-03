@@ -41,8 +41,7 @@ private:
 	
 public:
 	/**
-	 * The memory manager takes ownership of the ROM and RAM data,
-	 * as well as all of the instructions.
+	 * The memory manager takes ownership of the ROM and RAM data, as well as all the instructions.
 	 */
 	Memory(U32 text_pos, U32 text_size, std::vector<Inst>& instructions,
 		   U32 rom_pos, U8* rom_bytes, U8* ram_bytes)

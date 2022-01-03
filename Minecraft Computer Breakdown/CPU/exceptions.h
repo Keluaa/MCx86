@@ -64,6 +64,7 @@ public:
 class UnknownInstruction : public ExceptionWithMsg
 {
 public:
+    // TODO : replace with the Invalid Opcode interrupt
 	UnknownInstruction(const char* msg, const U16 opcode, const U32 pos)
 	{
 		const size_t buffer_size = strlen(msg) + 20;

@@ -70,8 +70,8 @@ void CPU::execute_non_arithmetic_instruction_with_state_machine(const U8 opcode,
 	case Opcodes::INT:
     {
         // Assume IA-32e-MODE case (see the operation section of the manual for INT)
-        // TODO
-        throw_NYI("INT is not yet implemented");
+        U8 vector_number = data.imm;
+        interrupt({ vector_number });
         break;
     }
     case Opcodes::IRET:

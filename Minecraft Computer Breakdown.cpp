@@ -30,19 +30,9 @@ On veut un raw binairy, pour faire ca, voir:
 Voir Bochs, un projet similaire d'emulation de processeur x86
 -> peut-être pas adapté à ce que je veux faire
 
-Voir celui-ci (et ses références):
-https://uob-hpc.github.io/SimEng/
-
-
 Il me FAUT un os? Voir:
 https://wiki.osdev.org/Main_Page
 Je pleure.
-
-Instruction encoder/decoder
-https://intelxed.github.io/ref-manual/index.html
-
-Autre emu intel:
-Intel SDE
 
 Description complète des ELF: https://www.youtube.com/watch?v=nC1U1LJQL8o
 

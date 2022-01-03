@@ -43,7 +43,7 @@ class CPU
 	void push(U32 value, OpSize size = OpSize::UNKNOWN);
 	U32 pop(OpSize size = OpSize::UNKNOWN);
 
-	void interrupt(Interrupts::Interrupt interrupt);
+	void interrupt(Interrupts::Interrupt interrupt, U8 error_code = 0);
 
     void throw_NYI(const char* msg) const
     {

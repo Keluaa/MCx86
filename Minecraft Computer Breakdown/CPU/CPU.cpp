@@ -380,27 +380,50 @@ U32 CPU::pop(OpSize size)
 
 
 /**
- * Called to trigger an interrupt: saves the position in the program, setup the stack and error code data,
+ * Called to trigger an interrupt: saves the position in the program, set up the stack and error code data,
  * then switch to the corresponding interrupt handler. There is several things we need push to the stack, so we must
  * use the state machine design in order to spread them in several clock cycles.
  *
  * @param interrupt Interrupt info
  */
-void CPU::interrupt(Interrupts::Interrupt interrupt)
+void CPU::interrupt(Interrupts::Interrupt interrupt, U8 error_code)
 {
 	U8 index = 0;
 	bit repeat = 0, incr_index = 0;
 
-	do {
+    bit is_software_interrupt = !ALU::compare_equal(interrupt.vector, U8(1));
+
+    // Bounds check
+    U32 vector_number = (interrupt.vector << 4) | 0b1111; // TODO : I think this is an index, so we should compare with the size of the interrupts table
+    if (ALU::compare_greater_or_equal(vector_number, interrupts_table->limit)) {
+
+    }
+
+    const Interrupts::InterruptDescriptor& descriptor = interrupts_table->get_descriptor(vector_number);
+
+    if (!descriptor.present) {
+        // Invalid interrupt
+        new_clock_cycle();
+        error_code = Interrupts::error_code(vector_number, 1, !is_software_interrupt);
+        this->interrupt(Interrupts::GeneralProtection, error_code);
+    }
+
+    do {
 		repeat = 0;
 		incr_index = 0;
 
 		switch (interrupt.type)
 		{
 		case Interrupts::Type::Fault:
-			// at
-			// TODO : interrupts, see the 1986 manual at page 160, or the most recent one at page 3006
-			break;
+        {
+            // at
+            // TODO : interrupts, see the 1986 manual at page 160, or the most recent one at page 3006
+
+            // TODO : restore the state to one before the execution of the instruction
+            U32 return_address = registers.read_EIP();
+
+            break;
+        }
 
 		case Interrupts::Type::Trap:
 			// after
