@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "CPU/instructions.h"
-
 #include "memory/memory_manager.hpp"
+#include "logger.h"
 
 
 std::pair<U8*, U8*> load_memory_contents(std::filebuf& memory_file, uint32_t rom_size, uint32_t ram_size)
@@ -32,8 +32,8 @@ std::vector<Inst>* load_instructions(std::filebuf& instructions_file, uint32_t i
     auto read_count = instructions_file.sgetn(reinterpret_cast<char*>(instructions->data()), expected_read_count);
 
     if (read_count != expected_read_count) {
-        std::cout << "Error while reading instructions data: read only " << read_count << " bytes,"
-                  << " expected " << expected_read_count << " bytes.\n";
+        Logger::err() << "Error while reading instructions data: read only " << read_count << " bytes,"
+                      << " expected " << expected_read_count << " bytes.\n";
     }
 
     return instructions;
@@ -46,7 +46,7 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 {
 	std::ifstream memory_map_file(memory_map_filename);
 	if (!memory_map_file) {
-		std::cout << "Could not open the memory map file '" << memory_map_filename << "'\n";
+        Logger::err() << "Could not open the memory map file '" << memory_map_filename << "'\n";
 		return nullptr;
 	}
 	
@@ -68,16 +68,16 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 	memory_map_file.close();
 
     if (rom_start + Mem::ROM_SIZE != ram_start) {
-        std::cout << "The RAM should start where the ROM ends. "
-                  << "ROM start: 0x" << std::hex << rom_start
-                  << ", ROM end: 0x" << rom_start + Mem::ROM_SIZE
-                  << ", RAM start: 0x" << ram_start << "\n";
+        Logger::err() << "The RAM should start where the ROM ends. "
+                      << "ROM start: 0x" << std::hex << rom_start
+                      << ", ROM end: 0x" << rom_start + Mem::ROM_SIZE
+                      << ", RAM start: 0x" << ram_start << "\n";
         return nullptr;
     }
 
 	std::filebuf memory_file;
 	if (!memory_file.open(memory_contents_filename, std::ios::in | std::ios::binary)) {
-		std::cout << "Could not open the memory contents file '" << memory_contents_filename << "'\n";
+        Logger::err() << "Could not open the memory contents file '" << memory_contents_filename << "'\n";
 		return nullptr;
 	}
 
@@ -87,7 +87,7 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 	
 	std::filebuf instructions_file;
 	if (!instructions_file.open(instructions_filename, std::ios::in | std::ios::binary)) {
-		std::cout << "Could not open the instructions file '" << instructions_filename << "'\n";
+        Logger::err() << "Could not open the instructions file '" << instructions_filename << "'\n";
 		return nullptr;
 	}
 	
@@ -98,10 +98,10 @@ Mem::Memory* load_memory(const std::string& memory_map_filename,
 	Mem::Memory* memory = new Mem::Memory(inst_start, instructions->size() * sizeof(Inst), *instructions,
                                           rom_start, rom, ram);
 
-    std::cout << "Allocated " << static_cast<double>(memory->get_RAM()->get_size()) / 1000000 << " MB of RAM"
-              << ", with a "
-              << static_cast<double>(Mem::StaticBinaryTreeManagedMemory<Mem::RAM_SIZE, sizeof(U32)>::get_tree_cells_size()) / 1000000
-              << " MB allocator tree.\n";
+    Logger::log() << "Allocated " << static_cast<double>(memory->get_RAM()->get_size()) / 1000000 << " MB of RAM"
+                  << ", with a "
+                  << static_cast<double>(Mem::StaticBinaryTreeManagedMemory<Mem::RAM_SIZE, sizeof(U32)>::get_tree_cells_size()) / 1000000
+                  << " MB allocator tree.\n";
 
 	return memory;
 }

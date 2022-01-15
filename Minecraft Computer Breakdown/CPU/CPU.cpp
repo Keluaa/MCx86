@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "../ALU.hpp"
+#include "../logger.h"
 #include "../print_instructions.h"
 #include "CPU.h"
 #include "opcodes.h"
@@ -41,22 +42,22 @@ void CPU::run(size_t max_cycles)
 {
 	while (!halted) {
 		new_clock_cycle();
-		std::cout << "Cycle " << clock_cycle_count << "\n";
+        Logger::log() << "Cycle " << clock_cycle_count << "\n";
 		try {
 			execute_instruction(); // handles the incrementation of the EIP register
 		}
 		catch (ExceptionWithMsg& e) {
-			std::cerr << e.what() << "\n";
+            Logger::err() << e.what() << "\n";
 			break;
 		}
 
 		if (clock_cycle_count >= max_cycles) {
-			std::cout << "Max cycles reached. Interrupting program.\n";
+            Logger::log() << "Max cycles reached. Interrupting program.\n";
 			break;
 		}
 	}
 
-	std::cout << "Program finished in " << clock_cycle_count << " cycles.\n";
+    Logger::log() << "Program finished in " << clock_cycle_count << " cycles.\n";
 }
 
 
@@ -98,7 +99,9 @@ void CPU::execute_instruction()
     const Inst& inst = memory->fetch_instruction(registers.EIP);
     current_instruction = &inst;
 
-    print_instruction(registers.EIP, inst);
+    if (Logger::get_mode() == Logger::Mode::DEBUG) {
+        print_instruction(registers.EIP, inst);
+    }
 
     InstData data{};
 
@@ -336,7 +339,7 @@ void CPU::push(U32 value, OpSize size)
 	
 	registers.write(Register::ESP, esp);
 
-    std::cout << "Pushed 0x" << std::hex << value << " at 0x" << esp << std::dec << std::endl;
+    Logger::log() << "Pushed 0x" << std::hex << value << " at 0x" << esp << std::dec << std::endl;
 
     memory->write(esp, value, size);
 }
@@ -357,7 +360,7 @@ U32 CPU::pop(OpSize size)
 
     U32 val = memory->read(esp, size);
 
-    std::cout << "Popped 0x" << std::hex << val << " at 0x" << esp << std::dec << std::endl;
+    Logger::log() << "Popped 0x" << std::hex << val << " at 0x" << esp << std::dec << std::endl;
 
 	switch (size)
 	{
@@ -396,7 +399,7 @@ void CPU::interrupt(Interrupts::Interrupt interrupt, U8 error_code)
     // Bounds check
     U32 vector_number = (interrupt.vector << 4) | 0b1111; // TODO : I think this is an index, so we should compare with the size of the interrupts table
     if (ALU::compare_greater_or_equal(vector_number, interrupts_table->limit)) {
-
+        // TODO
     }
 
     const Interrupts::InterruptDescriptor& descriptor = interrupts_table->get_descriptor(vector_number);

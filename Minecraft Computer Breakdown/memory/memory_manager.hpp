@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "../data_types.h"
+#include "../cycle_changes_monitor.h"
 #include "exceptions.hpp"
 #include "descriptor_table.hpp"
 #include "RAM.hpp"
@@ -73,6 +74,7 @@ public:
         return instructions.at(address - text_pos);
     }
 
+
 	[[nodiscard]]
     U8* physical_at(U32 address) const
 	{
@@ -94,9 +96,11 @@ public:
 		}
 	}
 
+
     [[nodiscard]]
     U32 read(U32 address, OpSize size) const
     {
+        memory_change(address, size);
         // All of those checks can be parallelized using bit checks at the right places
         if (address >= text_pos && address < text_end) {
             throw WrongMemoryAccess("Text cannot be read.", address);
@@ -115,8 +119,10 @@ public:
         }
     }
 
+
     void write(U32 address, U32 value, OpSize size)
     {
+        memory_change(address, size);
         // All of those checks can be parallelized using bit checks at the right places
         if (address >= text_pos && address < text_end) {
             throw WrongMemoryAccess("Text cannot be written to.", address);

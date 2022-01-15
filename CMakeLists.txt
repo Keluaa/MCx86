@@ -13,3 +13,4 @@ add_subdirectory("Minecraft Computer Breakdown")
 target_link_libraries(Minecraft_Computer_Breakdown_run Minecraft_Computer_Breakdown_lib)
 
 add_subdirectory("Computer Tests")
+add_subdirectory("compare_with_processor")

@@ -3,6 +3,8 @@
 
 #include "exceptions.h"
 
+#include "../cycle_changes_monitor.h"
+
 
 /**
  * Reads a register from its ID
@@ -76,6 +78,7 @@ U32 Registers::read_index(U8 register_index, OpSize size) const
  */
 void Registers::write(const Register register_id, const U32 new_value)
 {
+    register_change(register_id);
 	U8 register_index = static_cast<U8>(register_id) % 8;
 
 	if (register_id <= Register::EDI) {
@@ -107,7 +110,7 @@ void Registers::write(const Register register_id, const U32 new_value)
  */
 void Registers::write(const Register register_id, const U32 new_value, OpSize size)
 {
-    U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
+	U8 register_index = static_cast<U8>(register_id) & 0b111; // mod 8
     return write_index(register_index, new_value, size);
 }
 
@@ -120,6 +123,7 @@ void Registers::write_index(U8 register_index, U32 value, OpSize size)
 	switch (size)
 	{
 	case OpSize::B:
+        register_change(static_cast<Register>(register_index | 0b10000));
 		if (register_index < 4) {
 			// Low byte
 			registers[register_index] |= value & 0xFF;
@@ -130,9 +134,11 @@ void Registers::write_index(U8 register_index, U32 value, OpSize size)
 		}
 		break;
 	case OpSize::W:
+        register_change(static_cast<Register>(register_index | 0b01000));
 		registers[register_index] |= value & 0xFFFF;
 		break;
 	case OpSize::DW:
+        register_change(static_cast<Register>(register_index));
 		registers[register_index] = value;
 		break;
 	default:
@@ -169,6 +175,53 @@ void Registers::complete_reset()
     flags.reset();
 	IDT_base = 0;
 	IDT_limit = 0;
+}
+
+
+const char* Registers::register_to_string(Register reg)
+{
+	static std::map<Register, const char*> register_names{
+		{ Register::EAX, "EAX" },
+		{ Register::ECX, "ECX" },
+		{ Register::EDX, "EDX" },
+		{ Register::EBX, "EBX" },
+		{ Register::ESP, "ESP" },
+		{ Register::EBP, "EBP" },
+		{ Register::ESI, "ESI" },
+		{ Register::EDI, "EDI" },
+		{ Register::AX,  "AX"  },
+		{ Register::CX,  "CX"  },
+		{ Register::DX,  "DX"  },
+		{ Register::BX,  "BX"  },
+		{ Register::SP,  "SP"  },
+		{ Register::BP,  "BP"  },
+		{ Register::SI,  "SI"  },
+		{ Register::DI,  "DI"  },
+		{ Register::AL,  "AL"  },
+		{ Register::CL,  "CL"  },
+		{ Register::DL,  "DL"  },
+		{ Register::BL,  "BL"  },
+		{ Register::AH,  "AH"  },
+		{ Register::CH,  "CH"  },
+		{ Register::DH,  "DH"  },
+		{ Register::BH,  "BH"  },
+		{ Register::CS,  "CS"  },
+		{ Register::SS,  "SS"  },
+		{ Register::DS,  "DS"  },
+		{ Register::ES,  "ES"  },
+		{ Register::FS,  "FS"  },
+		{ Register::GS,  "GS"  },
+		{ Register::CR0, "CR0" },
+		{ Register::CR1, "CR1" }
+	};
+
+	auto it = register_names.find(reg);
+	if (it == register_names.end()) {
+		return nullptr;
+	}
+	else {
+		return register_names[reg];
+	}
 }
 
 

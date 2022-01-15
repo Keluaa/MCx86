@@ -30,8 +30,6 @@ class CPU
 	U32 clock_cycle_count = 0;
     bit halted = false;
 
-	void new_clock_cycle();
-	
 	[[nodiscard]] static constexpr OpSize get_size(bit size_override, bit byte_size_override);
 	
 	void execute_arithmetic_instruction(U8 opcode, const InstData data, EFLAGS& flags, U32& ret, U32& ret_2);
@@ -63,6 +61,7 @@ public:
         delete io.get_bytes();
 	}
 
+	void new_clock_cycle();
 	void startup();
 	void run(size_t max_cycles = std::numeric_limits<size_t>::max());
 	void execute_instruction();
@@ -72,4 +71,10 @@ public:
 
     U32 read_io(U8 io_address, OpSize size);
     void write_io(U8 io_address, U32 value, OpSize size);
+
+	[[nodiscard]]
+	bool is_halted() const { return halted; }
+
+	[[nodiscard]]
+	U32 get_clock_cycle() const { return clock_cycle_count; }
 };

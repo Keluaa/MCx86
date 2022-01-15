@@ -52,7 +52,7 @@ enum class Register : U8
 
 
 /**
- * Returns true if the register 
+ * Returns true if the register is not a general purpose register (EAX to BH)
  */
 constexpr bit is_special_register(Register register_id)
 {
@@ -142,4 +142,6 @@ struct Registers
 	void reset_segments_registers();
 	void reset_control_registers();
 	void complete_reset();
+
+    static const char* register_to_string(Register reg);
 };
