@@ -6,6 +6,7 @@
 
 #include "data_types.h"
 #include "logger.h"
+#include "CPU/registers.h"
 
 
 class ChangesMonitor

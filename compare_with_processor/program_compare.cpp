@@ -3,6 +3,8 @@
 #include <fstream>
 #include <csignal>
 #include <vector>
+#include <string>
+#include <string_view>
 
 #include "CPU/CPU.h"
 #include "CPU/opcodes.h"
@@ -82,16 +84,25 @@ void print_changes(CPU& cpu)
 {
     static ChangesMonitor& changes_monitor = ChangesMonitor::get();
 
-    std::cout << "CHANGES\nREG\n";
+    std::cout << "CHANGES\nREG\n" << std::hex;
     for (auto it = changes_monitor.registers.begin(); it != changes_monitor.registers_it; it++) {
-        std::cout << Registers::register_to_string(*it) << ",";
+        std::cout << Registers::register_to_string(*it) << "=" << cpu.get_registers().read(*it) << ",";
     }
 
-    std::cout << "\nMEM\n" << std::hex;
+    std::cout << "\nMEM\n";
     for (auto it = changes_monitor.memory.begin(); it != changes_monitor.memory_it; it++) {
-        std::cout << it->first << ":" << opsize_to_size(it->second) << ",";
+        std::cout << it->first << ":" << opsize_to_size(it->second) << "=" << cpu.get_memory().read(it->first, it->second) << ",";
     }
     std::cout << std::dec << "\n";
+}
+
+
+void print_flags(CPU& cpu)
+{
+	std::string str = cpu.get_registers().flags.print();
+	std::string_view str_v(str);
+	str_v = str_v.substr(2, str_v.size() - 3);
+	std::cout << "FLAGS\n" << str_v << "\n";
 }
 
 
@@ -123,6 +134,7 @@ void run(CPU& cpu, U32 max_cycles, std::map<U32, U32>& instructions_map)
 		}
 
         print_changes(cpu);
+		print_flags(cpu);
 	
 		if (cpu.get_clock_cycle() >= max_cycles) {
 			std::cout << "ERROR\nMAX_CYCLES\n";

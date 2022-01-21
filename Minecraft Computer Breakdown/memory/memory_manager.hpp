@@ -100,7 +100,6 @@ public:
     [[nodiscard]]
     U32 read(U32 address, OpSize size) const
     {
-        memory_change(address, size);
         // All of those checks can be parallelized using bit checks at the right places
         if (address >= text_pos && address < text_end) {
             throw WrongMemoryAccess("Text cannot be read.", address);
