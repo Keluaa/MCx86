@@ -29,9 +29,9 @@ void CPU::startup()
     registers.set_CR0(control_register);
 
     // Setup registers
-    //registers.write(Register::ESP, memory->stack_end);
-    registers.write(Register::ESP, 0x4FD630); // Set to this value so that it matches the ESP value (to the first 5 hexdigits) of an actual execution of the program
-    registers.write_EIP(memory->text_pos);
+    registers.write(Register::ESP, memory->stack_end);
+    //registers.write(Register::ESP, 0x4FD630); // Set to this value so that it matches the ESP value (to the first 5 hexdigits) of an actual execution of the program
+    registers.write_EIP(memory->text_pos); // The entry point made to be always the first instruction
 }
 
 

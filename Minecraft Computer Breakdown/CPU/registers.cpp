@@ -78,22 +78,37 @@ U32 Registers::read_index(U8 register_index, OpSize size) const
  */
 void Registers::write(const Register register_id, const U32 new_value)
 {
-    register_change(register_id);
+    // TODO : separate those changes monitor from the other things
 	U8 register_index = static_cast<U8>(register_id) % 8;
 
 	if (register_id <= Register::EDI) {
+        if (registers[register_index] != new_value) {
+            register_change(register_id);
+        }
 		registers[register_index] = new_value;
 	}
 	else if (register_id <= Register::DI) {
+        if ((registers[register_index] & 0xFFFF) != (new_value & 0xFFFF)) {
+            register_change(register_id);
+        }
 		registers[register_index] |= new_value & 0xFFFF;
 	}
 	else if (register_id <= Register::BL) {
+        if ((registers[register_index] & 0x00FF) != (new_value & 0x00FF)) {
+            register_change(register_id);
+        }
 		registers[register_index] |= new_value & 0x00FF;
 	}
 	else if (register_id <= Register::BH) {
+        if ((registers[register_index] & 0xFF00) != ((new_value & 0x00FF) << 8)) {
+            register_change(register_id);
+        }
 		registers[register_index] |= (new_value & 0x00FF) << 8;
 	}
 	else if (register_id <= Register::GS) {
+        if (segments[register_index] != new_value) {
+            register_change(register_id);
+        }
 		segments[register_index] = new_value;
 	}
 	else if (register_id <= Register::CR1) {
@@ -120,25 +135,35 @@ void Registers::write(const Register register_id, const U32 new_value, OpSize si
  */
 void Registers::write_index(U8 register_index, U32 value, OpSize size)
 {
+    // TODO : separate those changes monitor from the other things
 	switch (size)
 	{
 	case OpSize::B:
-        register_change(static_cast<Register>(register_index | 0b10000));
 		if (register_index < 4) {
 			// Low byte
+            if ((registers[register_index] & 0x00FF) != (value & 0xFF)) {
+                register_change(static_cast<Register>(register_index | 0b10000));
+            }
 			registers[register_index] |= value & 0xFF;
 		}
 		else {
 			// High byte
+            if ((registers[register_index] & 0xFF00) != ((value & 0xFF) << 8)) {
+                register_change(static_cast<Register>(register_index | 0b10000));
+            }
 			registers[register_index] |= (value & 0xFF) << 8;
 		}
 		break;
 	case OpSize::W:
-        register_change(static_cast<Register>(register_index | 0b01000));
+        if ((registers[register_index] & 0xFFFF) != (value & 0xFFFF)) {
+            register_change(static_cast<Register>(register_index | 0b01000));
+        }
 		registers[register_index] |= value & 0xFFFF;
 		break;
 	case OpSize::DW:
-        register_change(static_cast<Register>(register_index));
+        if (registers[register_index] != value) {
+            register_change(static_cast<Register>(register_index));
+        }
 		registers[register_index] = value;
 		break;
 	default:

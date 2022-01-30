@@ -75,6 +75,7 @@ U32 opsize_to_size(OpSize size)
     case OpSize::DW:      return 4;
     case OpSize::W:       return 2;
     case OpSize::B:       return 1;
+    default:
     case OpSize::UNKNOWN: return 0;
     }
 }

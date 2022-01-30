@@ -18,6 +18,8 @@ namespace Mem
 const U32 ROM_SIZE = 0x100000;
 const U32 RAM_SIZE = 0x100000;
 const U32 STACK_SIZE = 0x100000;
+const U32 STACK_POS = 0xffffd6ec - STACK_SIZE;
+const bool USE_STACK_POS = true;
 
 class Memory
 {
@@ -49,7 +51,7 @@ public:
 		: text_pos(text_pos), text_end(text_pos + text_size),
 		  rom_pos(rom_pos), rom_end(rom_pos + ROM_SIZE),
 		  ram_pos(rom_end), ram_end(ram_pos + RAM_SIZE),
-		  stack_pos(ram_end), stack_end(stack_pos + STACK_SIZE),
+		  stack_pos(USE_STACK_POS ? STACK_POS : ram_end), stack_end(stack_pos + STACK_SIZE),
 		  rom_bytes(rom_bytes), ram_bytes(ram_bytes),
           stack_bytes(std::make_unique<U8[]>(STACK_SIZE)),
 		  rom(rom_bytes),
