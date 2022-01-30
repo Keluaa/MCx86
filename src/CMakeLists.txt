@@ -1,6 +1,4 @@
 ﻿
-project(Minecraft_Computer_Breakdown)
-
 set(HEADER_FILES
         ALU.hpp
 		data_types.h
@@ -34,4 +32,4 @@ set(SOURCE_FILES
 		CPU/registers.cpp
 		CPU/opcodes.cpp logger.cpp)
 
-add_library(Minecraft_Computer_Breakdown_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})
+add_library(mcx86_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

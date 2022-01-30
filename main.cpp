@@ -7,40 +7,6 @@
 #include "print_instructions.h"
 
 
-/*
-Voir pour compiler en flat: on voudrait quelque chose
-qui ne se charge pas dans la ram, sans descriptors etc...
-Par contre cela implique peut-etre de compiler les ressources
-separement, pour les mettre ensuite dans la ram.
-Sinon on peut aussi creer des alias pour les descripteurs
-de code & data, qui sont separe des autre segments et charges
-dans la rom. Le selecteur de segments va alors se diriger vers
-la rom.
-
-On veut un raw binairy, pour faire ca, voir:
- - https://stackoverflow.com/q/3615392/8662187
- - ELF file
- - objdump (unix)
- - dumpbin (Windows)
- - le linker me fait tres peur
- - position independant executable
- - static linking obligatoire
- - mais pas pour les libairies du systeme, la il va falloir du dynamic linking (arg non)
-
-Voir Bochs, un projet similaire d'emulation de processeur x86
--> peut-être pas adapté à ce que je veux faire
-
-Il me FAUT un os? Voir:
-https://wiki.osdev.org/Main_Page
-Je pleure.
-
-Description complète des ELF: https://www.youtube.com/watch?v=nC1U1LJQL8o
-
-
-Bon site de référence : https://sandpile.org/
-
-*/
-
 static const char memory_map_filename[] = "../executable_file_data/memory_map.txt";
 static const char memory_contents_filename[] = "../executable_file_data/memory_data.bin";
 static const char instructions_filename[] = "../executable_file_data/instructions.bin";
